@@ -1,10 +1,16 @@
 import React from 'react'
+import { AuthProvider, useAuth } from '@/features/auth/AuthContext'
+import { OrganizationProvider, useOrganization } from '@/features/organizations/OrganizationContext'
+import { AuthForm } from '@/features/auth/AuthForm'
+import { TenantSwitcher } from '@/features/organizations/TenantSwitcher'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { env } from '@/core/config/env'
-import { Trophy, ShieldCheck, Database, Layers, CheckCircle, AlertTriangle } from 'lucide-react'
+import { Trophy, ShieldCheck, Database, Layers, LogOut, CheckCircle, Users } from 'lucide-react'
 
-export const App: React.FC = () => {
+const DashboardContent: React.FC = () => {
+  const { user, profile, signOut } = useAuth()
+  const { activeOrganization, activeRole, organizations } = useOrganization()
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200 bg-white">
@@ -18,108 +24,149 @@ export const App: React.FC = () => {
               <p className="text-xs text-slate-500">SaaS Multi-Tenant Gymnastics Championship Management</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline">Fase 1: Preparación Técnica & Arquitectura</Badge>
-            {env.isConfigured ? (
-              <Badge variant="success">Supabase Conectado</Badge>
+
+          <div className="flex items-center gap-4">
+            <Badge variant="success">Supabase Conectado</Badge>
+            {user ? (
+              <div className="flex items-center gap-3">
+                <TenantSwitcher />
+                <div className="text-right hidden sm:block">
+                  <p className="text-xs font-semibold text-slate-800">{profile?.fullName || user.email}</p>
+                  <p className="text-[10px] text-slate-400 font-mono">{user.email}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => signOut()}
+                  title="Cerrar Sesión"
+                  className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </div>
             ) : (
-              <Badge variant="warning">Supabase Modo Local / Pendiente Config</Badge>
+              <Badge variant="outline">Modo Invitado / Auth Requerida</Badge>
             )}
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-8">
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-slate-900">Estado de la Base Técnica</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Plataforma comercial modular para campeonatos de gimnasia con aislamiento estricto por organización, RLS y auditoría de puntuaciones.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <Card>
-            <div className="flex items-center gap-3 mb-4">
-              <ShieldCheck className="h-6 w-6 text-emerald-600" />
-              <h3 className="font-semibold text-slate-800">Seguridad & Multi-Tenancy</h3>
+        {!user ? (
+          <div className="py-8">
+            <div className="max-w-md mx-auto mb-6 text-center">
+              <h2 className="text-2xl font-bold text-slate-900">Autenticación & Acceso Multi-Tenant</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Inicia sesión con tu cuenta o crea una nueva para interactuar con tus organizaciones y campeonatos.
+              </p>
             </div>
-            <ul className="space-y-2 text-sm text-slate-600">
-              <li className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-emerald-500" />
-                Políticas RLS en diseño por organización
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-emerald-500" />
-                No se exponen claves privilegiadas
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-emerald-500" />
-                Aislamiento estricto de roles de plataforma
-              </li>
-            </ul>
-          </Card>
+            <AuthForm />
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {/* Active Tenant Overview */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-blue-700">Organización Activa</span>
+                    <Badge variant="default">{activeRole || 'Sin Rol Asignado'}</Badge>
+                  </div>
+                  <h2 className="mt-1 text-2xl font-bold text-slate-900">
+                    {activeOrganization ? activeOrganization.name : 'No tienes una organización seleccionada'}
+                  </h2>
+                  <p className="text-xs text-slate-500 font-mono mt-0.5">
+                    ID: {activeOrganization ? activeOrganization.id : 'N/A'} • Slug: {activeOrganization?.slug || 'N/A'}
+                  </p>
+                </div>
 
-          <Card>
-            <div className="flex items-center gap-3 mb-4">
-              <Database className="h-6 w-6 text-blue-600" />
-              <h3 className="font-semibold text-slate-800">Reglamento & Puntuaciones</h3>
-            </div>
-            <ul className="space-y-2 text-sm text-slate-600">
-              <li className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-emerald-500" />
-                Versionado explícito de código de puntos
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-emerald-500" />
-                Fórmulas deterministas por disciplina
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-emerald-500" />
-                Pista de auditoría inmutable de correcciones
-              </li>
-            </ul>
-          </Card>
-
-          <Card>
-            <div className="flex items-center gap-3 mb-4">
-              <Layers className="h-6 w-6 text-indigo-600" />
-              <h3 className="font-semibold text-slate-800">Flujo de Publicación</h3>
-            </div>
-            <ul className="space-y-2 text-sm text-slate-600">
-              <li className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-emerald-500" />
-                Resultados borradores protegidos
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-emerald-500" />
-                Canales en vivo provisionales vs oficiales
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-emerald-500" />
-                Clasificaciones derivadas de notas aprobadas
-              </li>
-            </ul>
-          </Card>
-        </div>
-
-        {!env.isConfigured && (
-          <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
-              <div>
-                <h4 className="text-sm font-semibold text-amber-900">Variables de Entorno de Supabase</h4>
-                <p className="mt-1 text-sm text-amber-700">
-                  Copia el archivo <code className="font-mono bg-amber-100 px-1 py-0.5 rounded text-xs">.env.example</code> a{' '}
-                  <code className="font-mono bg-amber-100 px-1 py-0.5 rounded text-xs">.env</code> y define tus credenciales públicas{' '}
-                  <code className="font-mono bg-amber-100 px-1 py-0.5 rounded text-xs">VITE_SUPABASE_URL</code> y{' '}
-                  <code className="font-mono bg-amber-100 px-1 py-0.5 rounded text-xs">VITE_SUPABASE_ANON_KEY</code>.
-                </p>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 border border-slate-200 text-xs">
+                    <Users className="h-4 w-4 text-slate-600" />
+                    <span>Membresías activas: <strong>{organizations.length}</strong></span>
+                  </div>
+                </div>
               </div>
+            </div>
+
+            {/* Architecture Invariants */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              <Card>
+                <div className="flex items-center gap-3 mb-4">
+                  <ShieldCheck className="h-6 w-6 text-emerald-600" />
+                  <h3 className="font-semibold text-slate-800">Aislamiento RLS en Vivo</h3>
+                </div>
+                <ul className="space-y-2 text-sm text-slate-600">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                    Filtrado estricto por <code>organization_id</code>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                    Escalamiento de privilegios bloqueado por trigger
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                    Consultas directas a PostgREST operativas
+                  </li>
+                </ul>
+              </Card>
+
+              <Card>
+                <div className="flex items-center gap-3 mb-4">
+                  <Database className="h-6 w-6 text-blue-600" />
+                  <h3 className="font-semibold text-slate-800">Reglamento & Puntuaciones</h3>
+                </div>
+                <ul className="space-y-2 text-sm text-slate-600">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                    Versionado de Código de Puntos FIG/USAG
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                    Fórmulas puras sin ejecución arbitraria
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                    Auditoría inmutable con motivo de cambio
+                  </li>
+                </ul>
+              </Card>
+
+              <Card>
+                <div className="flex items-center gap-3 mb-4">
+                  <Layers className="h-6 w-6 text-indigo-600" />
+                  <h3 className="font-semibold text-slate-800">Próximo Hito: Fase Deportiva</h3>
+                </div>
+                <ul className="space-y-2 text-sm text-slate-600">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                    Gestión de Campeonatos y Categorías
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                    Paneles de Jueces y Registro de Notas
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                    Clasificaciones All-Around y por Equipos
+                  </li>
+                </ul>
+              </Card>
             </div>
           </div>
         )}
       </main>
     </div>
+  )
+}
+
+export const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <OrganizationProvider>
+        <DashboardContent />
+      </OrganizationProvider>
+    </AuthProvider>
   )
 }
 
