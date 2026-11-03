@@ -6,6 +6,7 @@ import { TenantSwitcher } from '@/features/organizations/TenantSwitcher'
 import { ChampionshipsManager } from '@/features/championships/ChampionshipsManager'
 import { DelegationsManager } from '@/features/delegations/DelegationsManager'
 import { ScoringPad } from '@/features/scoring/ScoringPad'
+import { LiveStandingsBoard } from '@/features/standings/LiveStandingsBoard'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Trophy, ShieldCheck, Database, Layers, LogOut, CheckCircle, Users } from 'lucide-react'
@@ -103,6 +104,7 @@ const DashboardContent: React.FC = () => {
                   </p>
                   <ScoringPad gymnastName="Camila Valenzuela • Club Deportivo Manquehue" apparatusName="Salto (VT) - Ronda 1" />
                 </div>
+                <LiveStandingsBoard />
               </div>
             )}
 
