@@ -4,6 +4,7 @@ import { OrganizationProvider, useOrganization } from '@/features/organizations/
 import { AuthForm } from '@/features/auth/AuthForm'
 import { TenantSwitcher } from '@/features/organizations/TenantSwitcher'
 import { ChampionshipsManager } from '@/features/championships/ChampionshipsManager'
+import { DelegationsManager } from '@/features/delegations/DelegationsManager'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Trophy, ShieldCheck, Database, Layers, LogOut, CheckCircle, Users } from 'lucide-react'
@@ -91,7 +92,10 @@ const DashboardContent: React.FC = () => {
 
             {/* Phase 6: Championships Module */}
             {activeOrganization && (
-              <ChampionshipsManager />
+              <div className="space-y-8">
+                <ChampionshipsManager />
+                <DelegationsManager />
+              </div>
             )}
 
             {/* Architecture Invariants */}

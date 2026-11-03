@@ -332,6 +332,192 @@ export interface Database {
           }
         ]
       }
+      clubs: {
+        Row: {
+          id: string
+          organization_id: string
+          name: string
+          short_name: string | null
+          code: string
+          logo_url: string | null
+          city: string | null
+          state_or_region: string | null
+          country: string
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          name: string
+          short_name?: string | null
+          code: string
+          logo_url?: string | null
+          city?: string | null
+          state_or_region?: string | null
+          country?: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          name?: string
+          short_name?: string | null
+          code?: string
+          logo_url?: string | null
+          city?: string | null
+          state_or_region?: string | null
+          country?: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clubs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      gymnasts: {
+        Row: {
+          id: string
+          club_id: string
+          organization_id: string
+          first_name: string
+          last_name: string
+          rut_or_id: string | null
+          license_number: string | null
+          birth_date: string
+          gender: 'female' | 'male' | 'mixed'
+          medical_clearance_date: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          club_id: string
+          organization_id: string
+          first_name: string
+          last_name: string
+          rut_or_id?: string | null
+          license_number?: string | null
+          birth_date: string
+          gender?: 'female' | 'male' | 'mixed'
+          medical_clearance_date?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          club_id?: string
+          organization_id?: string
+          first_name?: string
+          last_name?: string
+          rut_or_id?: string | null
+          license_number?: string | null
+          birth_date?: string
+          gender?: 'female' | 'male' | 'mixed'
+          medical_clearance_date?: string | null
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gymnasts_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gymnasts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      registrations: {
+        Row: {
+          id: string
+          championship_id: string
+          category_id: string
+          subcategory_id: string | null
+          gymnast_id: string
+          club_id: string
+          bib_number: number | null
+          rotation_group: string | null
+          status: 'pending_approval' | 'approved' | 'rejected' | 'scratched'
+          approved_at: string | null
+          approved_by_user_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          championship_id: string
+          category_id: string
+          subcategory_id?: string | null
+          gymnast_id: string
+          club_id: string
+          bib_number?: number | null
+          rotation_group?: string | null
+          status?: 'pending_approval' | 'approved' | 'rejected' | 'scratched'
+          approved_at?: string | null
+          approved_by_user_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          championship_id?: string
+          category_id?: string
+          subcategory_id?: string | null
+          gymnast_id?: string
+          club_id?: string
+          bib_number?: number | null
+          rotation_group?: string | null
+          status?: 'pending_approval' | 'approved' | 'rejected' | 'scratched'
+          approved_at?: string | null
+          approved_by_user_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registrations_championship_id_fkey"
+            columns: ["championship_id"]
+            isOneToOne: false
+            referencedRelation: "championships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registrations_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registrations_gymnast_id_fkey"
+            columns: ["gymnast_id"]
+            isOneToOne: false
+            referencedRelation: "gymnasts"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       score_audits: {
         Row: {
           id: string
