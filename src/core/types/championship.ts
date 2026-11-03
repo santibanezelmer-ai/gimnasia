@@ -1,10 +1,10 @@
 /**
- * Core domain types for Gymnastics Championships.
+ * Domain types for Phase 6: Championships, Disciplines, Apparatuses, and Categories.
  */
 
 export type ChampionshipVisibility = 'public' | 'private' | 'invitational'
 
-export type ChampionshipStatus = 
+export type ChampionshipStatus =
   | 'draft'
   | 'registration_open'
   | 'registration_closed'
@@ -12,18 +12,15 @@ export type ChampionshipStatus =
   | 'completed'
   | 'archived'
 
-export type GymnasticsDiscipline = 
-  | 'GAF' // Gimnasia Artística Femenina (Women's Artistic Gymnastics)
-  | 'GAM' // Gimnasia Artística Masculina (Men's Artistic Gymnastics)
-  | 'GR'  // Gimnasia Rítmica (Rhythmic Gymnastics)
-  | 'TRA' // Trampolín (Trampoline Gymnastics)
-  | 'AER' // Gimnasia Aeróbica (Aerobic Gymnastics)
-  | 'ACRO'// Gimnasia Acrobática (Acrobatic Gymnastics)
+export type GymnasticsDiscipline =
+  | 'GAF' // Women's Artistic Gymnastics
+  | 'GAM' // Men's Artistic Gymnastics
+  | 'GR'  // Rhythmic Gymnastics
+  | 'TRA' // Trampoline Gymnastics
+  | 'AER' // Aerobic Gymnastics
+  | 'ACRO'// Acrobatic Gymnastics
 
-export type ScorePublicationStatus = 
-  | 'unrealtime_hidden'    // Internal/judge draft, not visible to public
-  | 'provisional'          // Visible in live stream/provisional board
-  | 'official_approved'    // Final approved score, published to official reports
+export type GenderCategory = 'female' | 'male' | 'mixed'
 
 export interface Championship {
   id: string
@@ -34,10 +31,12 @@ export interface Championship {
   startDate: string
   endDate: string
   location?: string
+  venueName?: string
   visibility: ChampionshipVisibility
   status: ChampionshipStatus
   rulesetVersion: string          // e.g. "FIG_2025_2028_V1", "USAG_LEVELS_2024"
-  scoringSchemaVersion: string    // Versioned JSON schema identifier for score calculations
+  scoringSchemaVersion: string    // Versioned scoring engine identifier
+  bannerUrl?: string
   createdAt: string
   updatedAt: string
 }
@@ -45,17 +44,34 @@ export interface Championship {
 export interface Apparatus {
   id: string
   discipline: GymnasticsDiscipline
-  code: string                    // e.g. "VT" (Vault), "UB" (Uneven Bars), "BB" (Balance Beam), "FX" (Floor Exercise)
+  code: string                    // e.g. "VT", "UB", "BB", "FX"
   name: string                    // e.g. "Salto", "Barras Asimétricas", "Viga", "Suelo"
   sortOrder: number
+  iconName?: string
 }
 
-export interface ScoreAuditEntry {
+export interface Category {
   id: string
-  scoreId: string
-  modifiedByUserId: string
-  reason: string
-  previousValue: Record<string, unknown>
-  newValue: Record<string, unknown>
+  championshipId: string
+  discipline: GymnasticsDiscipline
+  name: string                    // e.g. "Nivel 3", "FIG Senior"
+  code: string                    // e.g. "LVL3", "FIG-SR"
+  gender: GenderCategory
+  minAge?: number
+  maxAge?: number
+  sortOrder: number
+  subcategories?: Subcategory[]
+  apparatuses?: Apparatus[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Subcategory {
+  id: string
+  categoryId: string
+  name: string                    // e.g. "Sub-8", "8-9 años", "Juvenil"
+  minAge?: number
+  maxAge?: number
+  sortOrder: number
   createdAt: string
 }

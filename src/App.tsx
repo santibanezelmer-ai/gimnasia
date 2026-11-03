@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from '@/features/auth/AuthContext'
 import { OrganizationProvider, useOrganization } from '@/features/organizations/OrganizationContext'
 import { AuthForm } from '@/features/auth/AuthForm'
 import { TenantSwitcher } from '@/features/organizations/TenantSwitcher'
+import { ChampionshipsManager } from '@/features/championships/ChampionshipsManager'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Trophy, ShieldCheck, Database, Layers, LogOut, CheckCircle, Users } from 'lucide-react'
@@ -87,6 +88,11 @@ const DashboardContent: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Phase 6: Championships Module */}
+            {activeOrganization && (
+              <ChampionshipsManager />
+            )}
 
             {/* Architecture Invariants */}
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
