@@ -3,33 +3,35 @@ import { calculateFigScore } from './scoringEngine'
 import { supabase } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Calculator, AlertCircle, CheckCircle2, Send } from 'lucide-react'
+import { Calculator, AlertCircle, CheckCircle2, Send, User } from 'lucide-react'
 
 export interface ScoringPadProps {
-  gymnastName?: string
-  apparatusCode?: 'VT' | 'UB' | 'BB' | 'FX'
-  apparatusName?: string
-  isObligatory?: boolean          // Si es nivel con rutina establecida / no libre
-  fixedDScore?: number            // Nota D preestablecida en caso de ser obligatorio
-  championshipId?: string
-  registrationId?: string
-  apparatusId?: string
   onScoreSaved?: () => void
 }
 
-export const ScoringPad: React.FC<ScoringPadProps> = ({
-  gymnastName = 'Camila Valenzuela • Club Deportivo Manquehue',
-  apparatusCode = 'VT',
-  apparatusName = 'Salto (VT) - Ronda 1',
-  isObligatory: initialIsObligatory = false,
-  fixedDScore: initialFixedDScore = 10.0,
-  championshipId,
-  registrationId,
-  apparatusId,
-  onScoreSaved,
-}) => {
-  const [isObligatory, setIsObligatory] = useState<boolean>(initialIsObligatory)
-  const [fixedD, setFixedD] = useState<string>(initialFixedDScore.toString())
+interface ActiveRegistrationOption {
+  registrationId: string
+  gymnastName: string
+  clubName: string
+  categoryName: string
+  championshipId: string
+}
+
+interface ApparatusOption {
+  id: string
+  code: string
+  name: string
+}
+
+export const ScoringPad: React.FC<ScoringPadProps> = ({ onScoreSaved }) => {
+  const [registrations, setRegistrations] = useState<ActiveRegistrationOption[]>([])
+  const [apparatuses, setApparatuses] = useState<ApparatusOption[]>([])
+  const [selectedRegId, setSelectedRegId] = useState<string>('')
+  const [selectedAppId, setSelectedAppId] = useState<string>('')
+
+  // Scoring fields
+  const [isObligatory, setIsObligatory] = useState<boolean>(false)
+  const [fixedD, setFixedD] = useState<string>('10.0')
   const [dScore, setDScore] = useState<string>('4.8')
   const [e1, setE1] = useState<string>('8.5')
   const [e2, setE2] = useState<string>('8.7')
@@ -41,29 +43,62 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  // Internal resolved IDs if not provided as props
-  const [resolvedChampId, setResolvedChampId] = useState<string>(championshipId || '')
-  const [resolvedRegId, setResolvedRegId] = useState<string>(registrationId || '')
-  const [resolvedAppId, setResolvedAppId] = useState<string>(apparatusId || '')
-
+  // Load available apparatuses and registrations
   useEffect(() => {
-    // If IDs are not supplied, resolve the active championship and apparatus from Supabase
-    async function resolveDefaults() {
-      if (!resolvedChampId) {
-        const { data: champs } = await supabase.from('championships').select('id').limit(1)
-        if (champs && champs[0]) setResolvedChampId(champs[0].id)
+    async function loadPadData() {
+      // Apparatuses
+      const { data: appsData } = await supabase
+        .from('apparatuses')
+        .select('id, code, name')
+        .eq('discipline', 'GAF')
+        .order('sort_order', { ascending: true })
+
+      if (appsData && appsData.length > 0) {
+        setApparatuses(appsData)
+        setSelectedAppId(appsData[0].id)
       }
-      if (!resolvedAppId) {
-        const { data: apps } = await supabase.from('apparatuses').select('id').eq('code', apparatusCode).limit(1)
-        if (apps && apps[0]) setResolvedAppId(apps[0].id)
-      }
-      if (!resolvedRegId) {
-        const { data: regs } = await supabase.from('registrations').select('id').limit(1)
-        if (regs && regs[0]) setResolvedRegId(regs[0].id)
+
+      // Registrations with joined gymnast and club
+      const { data: regsData } = await supabase
+        .from('registrations')
+        .select(`
+          id,
+          championship_id,
+          gymnasts (
+            first_name,
+            last_name
+          ),
+          clubs (
+            name
+          ),
+          categories (
+            name,
+            scoring_regime,
+            default_fixed_d_score
+          )
+        `)
+        .eq('status', 'approved')
+
+      if (regsData && regsData.length > 0) {
+        const mapped = (regsData as unknown as Record<string, unknown>[]).map((r) => {
+          const gym = r.gymnasts as { first_name: string; last_name: string } | null
+          const club = r.clubs as { name: string } | null
+          const cat = r.categories as { name: string; scoring_regime?: string; default_fixed_d_score?: number } | null
+
+          return {
+            registrationId: r.id as string,
+            gymnastName: gym ? `${gym.first_name} ${gym.last_name}` : 'Gimnasta',
+            clubName: club?.name || 'Club',
+            categoryName: cat?.name || 'General',
+            championshipId: r.championship_id as string,
+          }
+        })
+        setRegistrations(mapped)
+        setSelectedRegId(mapped[0].registrationId)
       }
     }
-    resolveDefaults()
-  }, [apparatusCode, resolvedChampId, resolvedAppId, resolvedRegId])
+    loadPadData()
+  }, [])
 
   let result = null
   let calculationError = null
@@ -84,22 +119,26 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({
   }
 
   const handleSubmitScore = async (statusToSet: 'provisional' | 'official_approved' = 'official_approved') => {
-    if (!result) return
+    if (!result || !selectedRegId || !selectedAppId) {
+      setSaveError('Selecciona una gimnasta y un aparato válidos para registrar la nota.')
+      return
+    }
+
     setIsSubmitting(true)
     setSaveError(null)
     setSaveSuccess(null)
 
     try {
-      if (!resolvedChampId || !resolvedAppId) {
-        throw new Error('Falta ID de campeonato o aparato. Asegúrate de tener al menos un campeonato creado.')
+      const selectedReg = registrations.find((r) => r.registrationId === selectedRegId)
+      if (!selectedReg) {
+        throw new Error('Inscripción no encontrada.')
       }
 
-      // Upsert into public.scores
       const { error } = await supabase.from('scores').upsert(
         {
-          championship_id: resolvedChampId,
-          registration_id: resolvedRegId || '11111111-1111-1111-1111-111111111111',
-          apparatus_id: resolvedAppId,
+          championship_id: selectedReg.championshipId,
+          registration_id: selectedReg.registrationId,
+          apparatus_id: selectedAppId,
           attempt_number: 1,
           d_score: result.dScore,
           e_scores: result.eScoresRaw,
@@ -125,24 +164,25 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({
   }
 
   return (
-    <Card className="border-slate-200 bg-white">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 mb-4 gap-2">
+    <Card className="border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 mb-4 gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
             <Calculator className="h-5 w-5" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-slate-900">{apparatusName}</h4>
-            <p className="text-xs text-slate-500">{gymnastName}</p>
+            <h4 className="text-sm font-bold text-slate-900">Mesa de Jurado & Captura Oficial</h4>
+            <p className="text-xs text-slate-500">Terminal FIG 2025-2028 con descarte de extremos y transmisión Realtime</p>
           </div>
         </div>
+
         <div className="flex items-center gap-2">
           {/* Regime Selector */}
           <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs">
             <button
               type="button"
               onClick={() => setIsObligatory(false)}
-              className={`rounded-md px-2 py-0.5 font-medium transition-colors ${
+              className={`rounded-md px-2.5 py-1 font-medium transition-colors ${
                 !isObligatory ? 'bg-blue-700 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -151,7 +191,7 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({
             <button
               type="button"
               onClick={() => setIsObligatory(true)}
-              className={`rounded-md px-2 py-0.5 font-medium transition-colors ${
+              className={`rounded-md px-2.5 py-1 font-medium transition-colors ${
                 isObligatory ? 'bg-indigo-700 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -160,8 +200,54 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({
           </div>
 
           <Badge variant={isObligatory ? 'default' : 'outline'} className="text-[10px]">
-            {isObligatory ? 'D Fija Predeterminada' : 'Fórmula Oficial FIG'}
+            {isObligatory ? 'D Fija' : 'FIG D+E'}
           </Badge>
+        </div>
+      </div>
+
+      {/* Target Athlete & Apparatus Selector */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 p-3 rounded-xl bg-slate-50 border border-slate-200">
+        <div>
+          <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
+            <User className="h-3.5 w-3.5 text-slate-500" /> Gimnasta en Pista
+          </label>
+          {registrations.length === 0 ? (
+            <p className="text-xs text-amber-700 font-medium">
+              No hay gimnastas aprobadas aún en el campeonato.
+            </p>
+          ) : (
+            <select
+              value={selectedRegId}
+              onChange={(e) => setSelectedRegId(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-900 focus:border-blue-600 focus:outline-none"
+            >
+              {registrations.map((r) => (
+                <option key={r.registrationId} value={r.registrationId}>
+                  {r.gymnastName} • {r.clubName} ({r.categoryName})
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-[11px] font-bold text-slate-700 mb-1">Aparato en Competición</label>
+          <div className="flex gap-1.5">
+            {apparatuses.map((app) => (
+              <button
+                key={app.id}
+                type="button"
+                onClick={() => setSelectedAppId(app.id)}
+                className={`flex-1 rounded-lg py-1.5 text-xs font-bold font-mono transition-colors ${
+                  selectedAppId === app.id
+                    ? 'bg-blue-700 text-white shadow-sm'
+                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                {app.code}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -188,12 +274,11 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div className="sm:col-span-2 space-y-4">
-          {/* Difficulty Score Block */}
           {!isObligatory ? (
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-xs font-semibold text-slate-700">
-                  Nota D (Dificultad evaluada en vivo por Jurado D)
+                  Nota D (Dificultad en Vivo)
                 </label>
                 <Badge variant="outline" className="text-[10px]">Evaluación Dinámica</Badge>
               </div>
@@ -341,7 +426,7 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({
 
             <button
               type="button"
-              disabled={isSubmitting || !result}
+              disabled={isSubmitting || !result || registrations.length === 0}
               onClick={() => handleSubmitScore('official_approved')}
               className="mt-4 w-full rounded-lg bg-blue-700 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-800 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
             >
