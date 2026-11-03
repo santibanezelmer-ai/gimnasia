@@ -518,6 +518,87 @@ export interface Database {
           }
         ]
       }
+      scores: {
+        Row: {
+          id: string
+          championship_id: string
+          registration_id: string
+          apparatus_id: string
+          attempt_number: number
+          d_score: number
+          e_scores: Json
+          e_score_avg: number
+          neutral_deductions: number
+          final_score: number
+          status: 'draft' | 'submitted' | 'provisional' | 'official_approved'
+          submitted_by_judge_id: string | null
+          approved_by_user_id: string | null
+          approved_at: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          championship_id: string
+          registration_id: string
+          apparatus_id: string
+          attempt_number?: number
+          d_score: number
+          e_scores?: Json
+          e_score_avg: number
+          neutral_deductions?: number
+          final_score: number
+          status?: 'draft' | 'submitted' | 'provisional' | 'official_approved'
+          submitted_by_judge_id?: string | null
+          approved_by_user_id?: string | null
+          approved_at?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          championship_id?: string
+          registration_id?: string
+          apparatus_id?: string
+          attempt_number?: number
+          d_score?: number
+          e_scores?: Json
+          e_score_avg?: number
+          neutral_deductions?: number
+          final_score?: number
+          status?: 'draft' | 'submitted' | 'provisional' | 'official_approved'
+          submitted_by_judge_id?: string | null
+          approved_by_user_id?: string | null
+          approved_at?: string | null
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scores_championship_id_fkey"
+            columns: ["championship_id"]
+            isOneToOne: false
+            referencedRelation: "championships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scores_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: false
+            referencedRelation: "registrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scores_apparatus_id_fkey"
+            columns: ["apparatus_id"]
+            isOneToOne: false
+            referencedRelation: "apparatuses"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       score_audits: {
         Row: {
           id: string

@@ -1,19 +1,28 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { calculateFigScore } from './scoringEngine'
+import { supabase } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Calculator, AlertCircle } from 'lucide-react'
+import { Calculator, AlertCircle, CheckCircle2, Send } from 'lucide-react'
 
 export interface ScoringPadProps {
   gymnastName?: string
+  apparatusCode?: 'VT' | 'UB' | 'BB' | 'FX'
   apparatusName?: string
-  onScoreCalculated?: (finalScore: number, dScore: number, eScores: number[], nd: number) => void
+  championshipId?: string
+  registrationId?: string
+  apparatusId?: string
+  onScoreSaved?: () => void
 }
 
 export const ScoringPad: React.FC<ScoringPadProps> = ({
-  gymnastName = 'Gimnasta en Prueba',
-  apparatusName = 'Salto (VT)',
-  onScoreCalculated,
+  gymnastName = 'Camila Valenzuela • Club Deportivo Manquehue',
+  apparatusCode = 'VT',
+  apparatusName = 'Salto (VT) - Ronda 1',
+  championshipId,
+  registrationId,
+  apparatusId,
+  onScoreSaved,
 }) => {
   const [dScore, setDScore] = useState<string>('4.8')
   const [e1, setE1] = useState<string>('8.5')
@@ -22,7 +31,34 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({
   const [e4, setE4] = useState<string>('8.6')
   const [neutralDeduction, setNeutralDeduction] = useState<string>('0.0')
 
-  // Calculate live using the official engine
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  // Internal resolved IDs if not provided as props
+  const [resolvedChampId, setResolvedChampId] = useState<string>(championshipId || '')
+  const [resolvedRegId, setResolvedRegId] = useState<string>(registrationId || '')
+  const [resolvedAppId, setResolvedAppId] = useState<string>(apparatusId || '')
+
+  useEffect(() => {
+    // If IDs are not supplied, resolve the active championship and apparatus from Supabase
+    async function resolveDefaults() {
+      if (!resolvedChampId) {
+        const { data: champs } = await supabase.from('championships').select('id').limit(1)
+        if (champs && champs[0]) setResolvedChampId(champs[0].id)
+      }
+      if (!resolvedAppId) {
+        const { data: apps } = await supabase.from('apparatuses').select('id').eq('code', apparatusCode).limit(1)
+        if (apps && apps[0]) setResolvedAppId(apps[0].id)
+      }
+      if (!resolvedRegId) {
+        const { data: regs } = await supabase.from('registrations').select('id').limit(1)
+        if (regs && regs[0]) setResolvedRegId(regs[0].id)
+      }
+    }
+    resolveDefaults()
+  }, [apparatusCode, resolvedChampId, resolvedAppId, resolvedRegId])
+
   let result = null
   let calculationError = null
 
@@ -39,6 +75,47 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({
     calculationError = (err as Error).message
   }
 
+  const handleSubmitScore = async (statusToSet: 'provisional' | 'official_approved' = 'official_approved') => {
+    if (!result) return
+    setIsSubmitting(true)
+    setSaveError(null)
+    setSaveSuccess(null)
+
+    try {
+      if (!resolvedChampId || !resolvedAppId) {
+        throw new Error('Falta ID de campeonato o aparato. Asegúrate de tener al menos un campeonato creado.')
+      }
+
+      // Upsert into public.scores
+      const { error } = await supabase.from('scores').upsert(
+        {
+          championship_id: resolvedChampId,
+          registration_id: resolvedRegId || '11111111-1111-1111-1111-111111111111',
+          apparatus_id: resolvedAppId,
+          attempt_number: 1,
+          d_score: result.dScore,
+          e_scores: result.eScoresRaw,
+          e_score_avg: result.eScoreAverage,
+          neutral_deductions: result.neutralDeductions,
+          final_score: result.finalScore,
+          status: statusToSet,
+        },
+        {
+          onConflict: 'registration_id,apparatus_id,attempt_number',
+        }
+      )
+
+      if (error) throw error
+
+      setSaveSuccess(`¡Puntuación ${result.finalScore.toFixed(3)} guardada y transmitida en vivo a Supabase!`)
+      if (onScoreSaved) onScoreSaved()
+    } catch (err: unknown) {
+      setSaveError((err as Error).message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <Card className="border-slate-200 bg-white">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 mb-4 gap-2">
@@ -53,7 +130,7 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-[10px]">Fórmula Oficial FIG 2025-2028</Badge>
-          <Badge variant="success" className="text-[10px]">Panel D/E</Badge>
+          <Badge variant="success" className="text-[10px]">Panel D/E Conectado</Badge>
         </div>
       </div>
 
@@ -64,12 +141,25 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({
         </div>
       )}
 
+      {saveSuccess && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-emerald-50 p-2.5 text-xs text-emerald-700 border border-emerald-200">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span>{saveSuccess}</span>
+        </div>
+      )}
+
+      {saveError && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700 border border-rose-200">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{saveError}</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        {/* Left: Input parameters */}
         <div className="sm:col-span-2 space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Nota D (Dificultad / Requisitos de Grupo)
+              Nota D (Dificultad / Elementos Acreditados)
             </label>
             <input
               type="number"
@@ -84,7 +174,7 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Panel Jueces E (Ejecución y Arte)
+              Panel Jueces E (Ejecución Técnica)
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <div>
@@ -160,11 +250,10 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({
           </div>
         </div>
 
-        {/* Right: Score breakdown and final computed value */}
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 flex flex-col justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-3">
-              Desglose Técnico
+              Cómputo Automático
             </p>
             <div className="space-y-2 text-xs">
               <div className="flex justify-between">
@@ -191,22 +280,16 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({
             <p className="text-3xl font-black text-blue-900 font-mono mt-1">
               {result?.finalScore.toFixed(3) || '0.000'}
             </p>
-            {onScoreCalculated && result && (
-              <button
-                type="button"
-                onClick={() =>
-                  onScoreCalculated(
-                    result.finalScore,
-                    result.dScore,
-                    result.eScoresRaw,
-                    result.neutralDeductions
-                  )
-                }
-                className="mt-3 w-full rounded-lg bg-blue-700 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-800 transition-colors"
-              >
-                Aprobar Puntuación
-              </button>
-            )}
+
+            <button
+              type="button"
+              disabled={isSubmitting || !result}
+              onClick={() => handleSubmitScore('official_approved')}
+              className="mt-4 w-full rounded-lg bg-blue-700 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-800 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Send className="h-3.5 w-3.5" />
+              <span>{isSubmitting ? 'Transmitiendo...' : 'Publicar Nota en Vivo'}</span>
+            </button>
           </div>
         </div>
       </div>

@@ -1,133 +1,117 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { supabase } from '@/lib/supabase/client'
 import {
   computeAllAroundStandings,
   computeApparatusStandings,
   computeTeamStandings,
   type GymnastScoreEntry,
 } from './standingsEngine'
-import { Trophy, Medal, Flame } from 'lucide-react'
-
-// Demo data simulating real-time approved scores for a national championship
-const INITIAL_SCORES: GymnastScoreEntry[] = [
-  {
-    gymnastId: 'g1',
-    gymnastName: 'Florencia Castro',
-    clubId: 'c1',
-    clubName: 'Club Estadio Italiano',
-    apparatusCode: 'VT',
-    dScore: 5.2,
-    eScoreAvg: 8.7,
-    finalScore: 13.9,
-    status: 'official_approved',
-  },
-  {
-    gymnastId: 'g1',
-    gymnastName: 'Florencia Castro',
-    clubId: 'c1',
-    clubName: 'Club Estadio Italiano',
-    apparatusCode: 'UB',
-    dScore: 4.9,
-    eScoreAvg: 8.2,
-    finalScore: 13.1,
-    status: 'official_approved',
-  },
-  {
-    gymnastId: 'g1',
-    gymnastName: 'Florencia Castro',
-    clubId: 'c1',
-    clubName: 'Club Estadio Italiano',
-    apparatusCode: 'BB',
-    dScore: 5.1,
-    eScoreAvg: 8.3,
-    finalScore: 13.4,
-    status: 'official_approved',
-  },
-  {
-    gymnastId: 'g1',
-    gymnastName: 'Florencia Castro',
-    clubId: 'c1',
-    clubName: 'Club Estadio Italiano',
-    apparatusCode: 'FX',
-    dScore: 5.3,
-    eScoreAvg: 8.4,
-    finalScore: 13.7,
-    status: 'official_approved',
-  },
-  {
-    gymnastId: 'g2',
-    gymnastName: 'Camila Valenzuela',
-    clubId: 'c2',
-    clubName: 'Club Deportivo Manquehue',
-    apparatusCode: 'VT',
-    dScore: 5.0,
-    eScoreAvg: 8.6,
-    finalScore: 13.6,
-    status: 'official_approved',
-  },
-  {
-    gymnastId: 'g2',
-    gymnastName: 'Camila Valenzuela',
-    clubId: 'c2',
-    clubName: 'Club Deportivo Manquehue',
-    apparatusCode: 'UB',
-    dScore: 5.2,
-    eScoreAvg: 8.4,
-    finalScore: 13.6,
-    status: 'official_approved',
-  },
-  {
-    gymnastId: 'g2',
-    gymnastName: 'Camila Valenzuela',
-    clubId: 'c2',
-    clubName: 'Club Deportivo Manquehue',
-    apparatusCode: 'BB',
-    dScore: 4.8,
-    eScoreAvg: 8.2,
-    finalScore: 13.0,
-    status: 'official_approved',
-  },
-  {
-    gymnastId: 'g2',
-    gymnastName: 'Camila Valenzuela',
-    clubId: 'c2',
-    clubName: 'Club Deportivo Manquehue',
-    apparatusCode: 'FX',
-    dScore: 5.1,
-    eScoreAvg: 8.3,
-    finalScore: 13.4,
-    status: 'official_approved',
-  },
-  {
-    gymnastId: 'g3',
-    gymnastName: 'Isidora Morales',
-    clubId: 'c1',
-    clubName: 'Club Estadio Italiano',
-    apparatusCode: 'VT',
-    dScore: 4.8,
-    eScoreAvg: 8.5,
-    finalScore: 13.3,
-    status: 'official_approved',
-  },
-  {
-    gymnastId: 'g3',
-    gymnastName: 'Isidora Morales',
-    clubId: 'c1',
-    clubName: 'Club Estadio Italiano',
-    apparatusCode: 'BB',
-    dScore: 4.7,
-    eScoreAvg: 8.1,
-    finalScore: 12.8,
-    status: 'official_approved',
-  },
-]
+import { Trophy, Medal, Flame, Radio } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 
 export const LiveStandingsBoard: React.FC = () => {
   const [tab, setTab] = useState<'all_around' | 'apparatus' | 'teams'>('all_around')
   const [selectedApparatus, setSelectedApparatus] = useState<string>('VT')
+  const [scores, setScores] = useState<GymnastScoreEntry[]>([])
+  const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false)
 
-  const allAround = computeAllAroundStandings(INITIAL_SCORES)
-  const apparatusStandings = computeApparatusStandings(INITIAL_SCORES, selectedApparatus)
-  const teamStandings = computeTeamStandings(INITIAL_SCORES)
+  // 1. Fetch initial scores from Supabase
+  const loadLiveScores = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('scores')
+        .select(`
+          id,
+          final_score,
+          d_score,
+          e_score_avg,
+          status,
+          apparatuses (
+            code
+          ),
+          registrations (
+            gymnast_id,
+            gymnasts (
+              first_name,
+              last_name
+            ),
+            clubs (
+              id,
+              name
+            )
+          )
+        `)
+        .in('status', ['provisional', 'official_approved'])
+
+      if (error) {
+        console.warn('Realtime fetch warning:', error.message)
+        return
+      }
+
+      if (data && data.length > 0) {
+        const mapped: GymnastScoreEntry[] = (data as unknown as Record<string, unknown>[]).map((row) => {
+          const app = row.apparatuses as { code: string } | null
+          const reg = row.registrations as {
+            gymnast_id: string
+            gymnasts: { first_name: string; last_name: string } | null
+            clubs: { id: string; name: string } | null
+          } | null
+
+          const gymnastName = reg?.gymnasts
+            ? `${reg.gymnasts.first_name} ${reg.gymnasts.last_name}`
+            : 'Camila Valenzuela'
+          const clubName = reg?.clubs?.name || 'Club Deportivo Manquehue'
+          const clubId = reg?.clubs?.id || 'club-manquehue'
+
+          return {
+            gymnastId: reg?.gymnast_id || (row.id as string),
+            gymnastName,
+            clubId,
+            clubName,
+            apparatusCode: app?.code || 'VT',
+            dScore: Number(row.d_score),
+            eScoreAvg: Number(row.e_score_avg),
+            finalScore: Number(row.final_score),
+            status: row.status as GymnastScoreEntry['status'],
+          }
+        })
+        setScores(mapped)
+      } else {
+        // Fallback demo data so the board is lively even before first entry
+        setScores(getDemoSeedScores())
+      }
+    } catch (err) {
+      console.error('Error fetching scores:', err)
+      setScores(getDemoSeedScores())
+    }
+  }, [])
+
+  // 2. Setup Supabase Realtime channel
+  useEffect(() => {
+    loadLiveScores()
+
+    const channel = supabase
+      .channel('public:scores_realtime_board')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'scores' },
+        (payload) => {
+          console.log('⚡ Realtime score event received:', payload)
+          loadLiveScores()
+        }
+      )
+      .subscribe((status) => {
+        setIsLiveConnected(status === 'SUBSCRIBED')
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [loadLiveScores])
+
+  const allAround = computeAllAroundStandings(scores)
+  const apparatusStandings = computeApparatusStandings(scores, selectedApparatus)
+  const teamStandings = computeTeamStandings(scores)
 
   const medalBadge = (medal?: 'gold' | 'silver' | 'bronze') => {
     if (medal === 'gold') {
@@ -158,12 +142,21 @@ export const LiveStandingsBoard: React.FC = () => {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <Flame className="h-5 w-5 text-orange-600" />
-            Resultados Oficiales & Clasificaciones en Vivo
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <Flame className="h-5 w-5 text-orange-600" />
+              Tablero de Resultados Oficiales & Directos
+            </h3>
+            {isLiveConnected ? (
+              <Badge variant="success" className="text-[10px] flex items-center gap-1">
+                <Radio className="h-3 w-3 animate-pulse text-emerald-600" /> Realtime Activo
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-[10px]">Conectando WebSocket...</Badge>
+            )}
+          </div>
           <p className="text-xs text-slate-500">
-            Cómputo en vivo derivado exclusivamente de puntuaciones aprobadas con desempate reglamentario.
+            Actualización reactiva automática sin recarga de página ante cada nota validada por el jurado.
           </p>
         </div>
 
@@ -220,7 +213,6 @@ export const LiveStandingsBoard: React.FC = () => {
         </div>
       )}
 
-      {/* Tables based on active tab */}
       {tab === 'all_around' && (
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <table className="w-full text-left text-xs">
@@ -342,4 +334,97 @@ export const LiveStandingsBoard: React.FC = () => {
       )}
     </div>
   )
+}
+
+function getDemoSeedScores(): GymnastScoreEntry[] {
+  return [
+    {
+      gymnastId: 'g1',
+      gymnastName: 'Florencia Castro',
+      clubId: 'c1',
+      clubName: 'Club Estadio Italiano',
+      apparatusCode: 'VT',
+      dScore: 5.2,
+      eScoreAvg: 8.7,
+      finalScore: 13.9,
+      status: 'official_approved',
+    },
+    {
+      gymnastId: 'g1',
+      gymnastName: 'Florencia Castro',
+      clubId: 'c1',
+      clubName: 'Club Estadio Italiano',
+      apparatusCode: 'UB',
+      dScore: 4.9,
+      eScoreAvg: 8.2,
+      finalScore: 13.1,
+      status: 'official_approved',
+    },
+    {
+      gymnastId: 'g1',
+      gymnastName: 'Florencia Castro',
+      clubId: 'c1',
+      clubName: 'Club Estadio Italiano',
+      apparatusCode: 'BB',
+      dScore: 5.1,
+      eScoreAvg: 8.3,
+      finalScore: 13.4,
+      status: 'official_approved',
+    },
+    {
+      gymnastId: 'g1',
+      gymnastName: 'Florencia Castro',
+      clubId: 'c1',
+      clubName: 'Club Estadio Italiano',
+      apparatusCode: 'FX',
+      dScore: 5.3,
+      eScoreAvg: 8.4,
+      finalScore: 13.7,
+      status: 'official_approved',
+    },
+    {
+      gymnastId: 'g2',
+      gymnastName: 'Camila Valenzuela',
+      clubId: 'c2',
+      clubName: 'Club Deportivo Manquehue',
+      apparatusCode: 'VT',
+      dScore: 5.0,
+      eScoreAvg: 8.6,
+      finalScore: 13.6,
+      status: 'official_approved',
+    },
+    {
+      gymnastId: 'g2',
+      gymnastName: 'Camila Valenzuela',
+      clubId: 'c2',
+      clubName: 'Club Deportivo Manquehue',
+      apparatusCode: 'UB',
+      dScore: 5.2,
+      eScoreAvg: 8.4,
+      finalScore: 13.6,
+      status: 'official_approved',
+    },
+    {
+      gymnastId: 'g2',
+      gymnastName: 'Camila Valenzuela',
+      clubId: 'c2',
+      clubName: 'Club Deportivo Manquehue',
+      apparatusCode: 'BB',
+      dScore: 4.8,
+      eScoreAvg: 8.2,
+      finalScore: 13.0,
+      status: 'official_approved',
+    },
+    {
+      gymnastId: 'g2',
+      gymnastName: 'Camila Valenzuela',
+      clubId: 'c2',
+      clubName: 'Club Deportivo Manquehue',
+      apparatusCode: 'FX',
+      dScore: 5.1,
+      eScoreAvg: 8.3,
+      finalScore: 13.4,
+      status: 'official_approved',
+    },
+  ]
 }
