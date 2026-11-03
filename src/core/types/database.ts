@@ -218,6 +218,8 @@ export interface Database {
           name: string
           code: string
           gender: 'female' | 'male' | 'mixed'
+          scoring_regime: 'free' | 'obligatory'
+          default_fixed_d_score: number | null
           min_age: number | null
           max_age: number | null
           sort_order: number
@@ -231,6 +233,8 @@ export interface Database {
           name: string
           code: string
           gender?: 'female' | 'male' | 'mixed'
+          scoring_regime?: 'free' | 'obligatory'
+          default_fixed_d_score?: number | null
           min_age?: number | null
           max_age?: number | null
           sort_order?: number
@@ -244,6 +248,8 @@ export interface Database {
           name?: string
           code?: string
           gender?: 'female' | 'male' | 'mixed'
+          scoring_regime?: 'free' | 'obligatory'
+          default_fixed_d_score?: number | null
           min_age?: number | null
           max_age?: number | null
           sort_order?: number
@@ -301,18 +307,21 @@ export interface Database {
           id: string
           category_id: string
           apparatus_id: string
+          fixed_d_score: number | null
           sort_order: number
         }
         Insert: {
           id?: string
           category_id: string
           apparatus_id: string
+          fixed_d_score?: number | null
           sort_order?: number
         }
         Update: {
           id?: string
           category_id?: string
           apparatus_id?: string
+          fixed_d_score?: number | null
           sort_order?: number
         }
         Relationships: [
@@ -656,6 +665,7 @@ export interface Database {
         | 'club_manager'
         | 'coach'
         | 'viewer'
+      category_scoring_regime: 'free' | 'obligatory'
       championship_visibility: 'public' | 'private' | 'invitational'
       championship_status:
         | 'draft'

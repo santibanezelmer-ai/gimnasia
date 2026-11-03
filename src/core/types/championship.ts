@@ -50,6 +50,10 @@ export interface Apparatus {
   iconName?: string
 }
 
+export type CategoryScoringRegime =
+  | 'free'        // Nivel Libre / Opcional: Jurado D (Dificultad evaluada en vivo) + Jurado E
+  | 'obligatory'  // Nivel No Libre / Rutina Establecida: Nota D fija, solo se califica E
+
 export interface Category {
   id: string
   championshipId: string
@@ -57,6 +61,8 @@ export interface Category {
   name: string                    // e.g. "Nivel 3", "FIG Senior"
   code: string                    // e.g. "LVL3", "FIG-SR"
   gender: GenderCategory
+  scoringRegime: CategoryScoringRegime
+  defaultFixedDScore?: number     // e.g. 10.000 for USAG Levels 1-5 or formativo
   minAge?: number
   maxAge?: number
   sortOrder: number

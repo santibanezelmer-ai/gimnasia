@@ -84,4 +84,21 @@ describe('FIG Gymnastics Scoring Engine Tests (Phases 8 & 9)', () => {
 
     expect(result.finalScore).toBe(0)
   })
+
+  it('correctly calculates obligatory routine score where D is fixed and only E judges score', () => {
+    // USAG Level 3 / Nivel Formativo Obligatorio: D fija = 10.000
+    // Jueces E evalúan solo ejecución: [8.8, 8.6, 8.9, 8.7] -> promedio = 8.750
+    // Final = 10.000 (D fija) + 8.750 - 0.000 = 18.750 (o sobre base 10)
+    const result = calculateFigScore({
+      dScore: 0, // Ignored because isObligatory is true
+      isObligatory: true,
+      fixedDScore: 10.0,
+      eScores: [8.8, 8.6, 8.9, 8.7],
+      neutralDeductions: 0.1,
+    })
+
+    expect(result.dScore).toBe(10.0)
+    expect(result.eScoreAverage).toBe(8.75)
+    expect(result.finalScore).toBe(18.65)
+  })
 })

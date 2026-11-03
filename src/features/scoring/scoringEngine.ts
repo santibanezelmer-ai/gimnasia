@@ -15,6 +15,8 @@ export interface ScoreInput {
   dScore: number
   eScores: number[]
   neutralDeductions?: number
+  isObligatory?: boolean          // Si es rutina obligatoria / no libre
+  fixedDScore?: number            // Nota D prefijada (ej. 10.000)
 }
 
 export interface ScoreCalculationResult {
@@ -37,14 +39,16 @@ export function roundScore(value: number, decimalPlaces = 3): number {
 }
 
 export function calculateFigScore(input: ScoreInput): ScoreCalculationResult {
-  const { dScore, eScores, neutralDeductions = 0 } = input
+  const { eScores, neutralDeductions = 0, isObligatory = false, fixedDScore = 10.0 } = input
+  // Si es obligatorio, la nota D está establecida de antemano y no se califica en vivo
+  const effectiveDScore = isObligatory ? fixedDScore : input.dScore
 
   if (!eScores || eScores.length === 0) {
     throw new Error('At least one Execution (E) score is required.')
   }
 
   // Validate values
-  if (dScore < 0) {
+  if (effectiveDScore < 0) {
     throw new Error('D-score cannot be negative.')
   }
   if (neutralDeductions < 0) {
@@ -77,11 +81,11 @@ export function calculateFigScore(input: ScoreInput): ScoreCalculationResult {
   const eScoreAverage = roundScore(sum / usedScores.length, 3)
 
   // Final score = D + E - ND
-  const rawFinal = dScore + eScoreAverage - neutralDeductions
+  const rawFinal = effectiveDScore + eScoreAverage - neutralDeductions
   const finalScore = roundScore(Math.max(0, rawFinal), 3)
 
   return {
-    dScore: roundScore(dScore, 3),
+    dScore: roundScore(effectiveDScore, 3),
     eScoresRaw: eScores,
     eScoresUsed: usedScores,
     eScoreDiscardedHigh: discardedHigh,

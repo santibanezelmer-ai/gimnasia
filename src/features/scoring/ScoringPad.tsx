@@ -9,6 +9,8 @@ export interface ScoringPadProps {
   gymnastName?: string
   apparatusCode?: 'VT' | 'UB' | 'BB' | 'FX'
   apparatusName?: string
+  isObligatory?: boolean          // Si es nivel con rutina establecida / no libre
+  fixedDScore?: number            // Nota D preestablecida en caso de ser obligatorio
   championshipId?: string
   registrationId?: string
   apparatusId?: string
@@ -19,11 +21,15 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({
   gymnastName = 'Camila Valenzuela • Club Deportivo Manquehue',
   apparatusCode = 'VT',
   apparatusName = 'Salto (VT) - Ronda 1',
+  isObligatory: initialIsObligatory = false,
+  fixedDScore: initialFixedDScore = 10.0,
   championshipId,
   registrationId,
   apparatusId,
   onScoreSaved,
 }) => {
+  const [isObligatory, setIsObligatory] = useState<boolean>(initialIsObligatory)
+  const [fixedD, setFixedD] = useState<string>(initialFixedDScore.toString())
   const [dScore, setDScore] = useState<string>('4.8')
   const [e1, setE1] = useState<string>('8.5')
   const [e2, setE2] = useState<string>('8.7')
@@ -66,7 +72,9 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({
     const rawE = [parseFloat(e1), parseFloat(e2), parseFloat(e3), parseFloat(e4)].filter((n) => !isNaN(n))
     if (rawE.length > 0) {
       result = calculateFigScore({
-        dScore: parseFloat(dScore) || 0,
+        dScore: isObligatory ? parseFloat(fixedD) || 10.0 : parseFloat(dScore) || 0,
+        isObligatory,
+        fixedDScore: parseFloat(fixedD) || 10.0,
         eScores: rawE,
         neutralDeductions: parseFloat(neutralDeduction) || 0,
       })
@@ -129,8 +137,31 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-[10px]">Fórmula Oficial FIG 2025-2028</Badge>
-          <Badge variant="success" className="text-[10px]">Panel D/E Conectado</Badge>
+          {/* Regime Selector */}
+          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs">
+            <button
+              type="button"
+              onClick={() => setIsObligatory(false)}
+              className={`rounded-md px-2 py-0.5 font-medium transition-colors ${
+                !isObligatory ? 'bg-blue-700 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Nivel Libre (D + E)
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsObligatory(true)}
+              className={`rounded-md px-2 py-0.5 font-medium transition-colors ${
+                isObligatory ? 'bg-indigo-700 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Rutina Establecida (Solo E)
+            </button>
+          </div>
+
+          <Badge variant={isObligatory ? 'default' : 'outline'} className="text-[10px]">
+            {isObligatory ? 'D Fija Predeterminada' : 'Fórmula Oficial FIG'}
+          </Badge>
         </div>
       </div>
 
@@ -157,20 +188,47 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div className="sm:col-span-2 space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Nota D (Dificultad / Elementos Acreditados)
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="10"
-              value={dScore}
-              onChange={(e) => setDScore(e.target.value)}
-              className="w-full sm:w-48 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-mono focus:border-blue-600 focus:outline-none"
-            />
-          </div>
+          {/* Difficulty Score Block */}
+          {!isObligatory ? (
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Nota D (Dificultad evaluada en vivo por Jurado D)
+                </label>
+                <Badge variant="outline" className="text-[10px]">Evaluación Dinámica</Badge>
+              </div>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="10"
+                value={dScore}
+                onChange={(e) => setDScore(e.target.value)}
+                className="w-full sm:w-48 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-mono focus:border-blue-600 focus:outline-none"
+              />
+            </div>
+          ) : (
+            <div className="rounded-lg bg-indigo-50/70 border border-indigo-200 p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-indigo-900">Nota D Predeterminada por Reglamento</p>
+                  <p className="text-[11px] text-indigo-700 mt-0.5">
+                    Rutina obligatoria / Nivel formativo. El jurado solo evalúa la ejecución técnica (E).
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-semibold text-indigo-800">Valor D:</span>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={fixedD}
+                    onChange={(e) => setFixedD(e.target.value)}
+                    className="w-20 rounded border border-indigo-300 bg-white px-2 py-1 text-xs font-mono font-bold text-indigo-900 text-center"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
