@@ -5,6 +5,7 @@ import { AuthForm } from '@/features/auth/AuthForm'
 import { TenantSwitcher } from '@/features/organizations/TenantSwitcher'
 import { ChampionshipsManager } from '@/features/championships/ChampionshipsManager'
 import { DelegationsManager } from '@/features/delegations/DelegationsManager'
+import { ScoringPad } from '@/features/scoring/ScoringPad'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Trophy, ShieldCheck, Database, Layers, LogOut, CheckCircle, Users } from 'lucide-react'
@@ -95,6 +96,13 @@ const DashboardContent: React.FC = () => {
               <div className="space-y-8">
                 <ChampionshipsManager />
                 <DelegationsManager />
+                <div className="space-y-3">
+                  <h3 className="text-lg font-bold text-slate-900">Mesa de Jurado & Captura en Vivo</h3>
+                  <p className="text-xs text-slate-500">
+                    Terminal de jueces con cálculo determinista FIG 2025-2028 y descarte automático de extremos.
+                  </p>
+                  <ScoringPad gymnastName="Camila Valenzuela • Club Deportivo Manquehue" apparatusName="Salto (VT) - Ronda 1" />
+                </div>
               </div>
             )}
 
