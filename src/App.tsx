@@ -308,6 +308,20 @@ const DashboardContent: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Platform Global Footer */}
+      <footer className="border-t border-slate-200 bg-white py-4 px-4 sm:px-6 text-xs text-slate-500">
+        <div className="mx-auto flex max-w-7xl flex-col sm:flex-row items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-slate-600">
+            <Trophy className="h-4 w-4 text-blue-700" />
+            <span className="font-bold text-slate-900">Operix Gymnastics</span>
+            <span>· Sistema Oficial FIG 2025-2028</span>
+          </div>
+          <div className="text-[11px] text-slate-500">
+            Desarrollado por <strong className="text-slate-800 font-bold">Comercial Hels SpA</strong>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

@@ -675,15 +675,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ initialMode = 'landing
       {/* =========================================================================
           FOOTER
          ========================================================================= */}
-      <footer className="border-t border-slate-200/90 pt-8 pb-12 text-center text-xs text-slate-500 space-y-3">
+      <footer className="border-t border-slate-200/90 pt-8 pb-12 text-center text-xs text-slate-500 space-y-2">
         <div className="flex items-center justify-center gap-2">
           <Trophy className="h-4 w-4 text-blue-700" />
           <span className="font-bold text-slate-900">Operix Gymnastics</span>
           <span className="text-slate-300">·</span>
           <span>SaaS Multiempresa de Gimnasia Deportiva</span>
         </div>
+        <p className="text-xs font-semibold text-slate-700">
+          Desarrollado por <span className="font-bold text-blue-700">Comercial Hels SpA</span>
+        </p>
         <p className="text-[11px] text-slate-400">
-          Conforme a las Regulaciones Técnicas y Código de Puntuación FIG 2025-2028 (GAF / GAM).
+          Conforme a las Regulaciones Técnicas y Código de Puntuación FIG 2025-2028 (GAF / GAM). Todos los derechos reservados.
         </p>
       </footer>
     </div>
