@@ -16,6 +16,9 @@ CREATE INDEX IF NOT EXISTS idx_championships_judge_code
   ON public.championships (UPPER(TRIM(judge_code)));
 
 -- 2. Enhanced submit_fast_judge_score with 2-attempt Vault support
+-- Drop previous 10-argument overload if it exists to avoid ambiguity error 42725
+DROP FUNCTION IF EXISTS public.submit_fast_judge_score(UUID, TEXT, UUID, UUID, TEXT, NUMERIC, JSONB, NUMERIC, NUMERIC, NUMERIC);
+
 CREATE OR REPLACE FUNCTION public.submit_fast_judge_score(
   p_championship_id UUID,
   p_judge_code TEXT,
