@@ -13,12 +13,13 @@ export type ChampionshipStatus =
   | 'archived'
 
 export type GymnasticsDiscipline =
-  | 'GAF' // Women's Artistic Gymnastics
-  | 'GAM' // Men's Artistic Gymnastics
-  | 'GR'  // Rhythmic Gymnastics
-  | 'TRA' // Trampoline Gymnastics
-  | 'AER' // Aerobic Gymnastics
-  | 'ACRO'// Acrobatic Gymnastics
+  | 'GAF' // Women's Artistic Gymnastics (Gimnasia Artística Femenina)
+  | 'GAM' // Men's Artistic Gymnastics (Gimnasia Artística Masculina)
+  | 'GR'  // Rhythmic Gymnastics (Gimnasia Rítmica)
+  | 'TRA' // Trampoline Gymnastics (Gimnasia Trampolín)
+  | 'AER' // Aerobic Gymnastics (Gimnasia Aeróbica)
+  | 'ACRO'// Acrobatic Gymnastics (Gimnasia Acrobática)
+  | 'PK'  // Parkour FIG (Velocidad y Estilo Libre)
 
 export type GenderCategory = 'female' | 'male' | 'mixed'
 

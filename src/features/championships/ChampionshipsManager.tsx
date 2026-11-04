@@ -10,6 +10,7 @@ import type {
   GymnasticsDiscipline,
   GenderCategory,
 } from '@/core/types/championship'
+import { DISCIPLINES_LIST, OFFICIAL_DISCIPLINES } from '@/core/constants/disciplines'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -932,15 +933,17 @@ export const ChampionshipsManager: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Disciplina</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Disciplina FIG</label>
                     <select
                       value={catDiscipline}
                       onChange={(e) => setCatDiscipline(e.target.value as GymnasticsDiscipline)}
                       className="w-full rounded border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-indigo-600 focus:outline-none"
                     >
-                      <option value="GAF">GAF (Femenina)</option>
-                      <option value="GAM">GAM (Masculina)</option>
-                      <option value="GR">GR (Rítmica)</option>
+                      {DISCIPLINES_LIST.map((d) => (
+                        <option key={d.code} value={d.code}>
+                          {d.code} - {d.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -1091,7 +1094,12 @@ export const ChampionshipsManager: React.FC = () => {
                         <span className="font-bold text-slate-900">{cat.name}</span>
                         <span className="ml-2 font-mono text-[10px] text-slate-400">({cat.code})</span>
                       </td>
-                      <td className="px-4 py-2.5 font-mono text-[11px] text-slate-600">{cat.discipline}</td>
+                      <td className="px-4 py-2.5">
+                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-800">
+                          {OFFICIAL_DISCIPLINES[cat.discipline]?.shortName || cat.discipline}
+                          <span className="ml-1 text-[9px] text-slate-400 font-mono">({cat.discipline})</span>
+                        </span>
+                      </td>
                       <td className="px-4 py-2.5">
                         {cat.scoringRegime === 'obligatory' ? (
                           <Badge variant="default" className="text-[10px] bg-indigo-700">

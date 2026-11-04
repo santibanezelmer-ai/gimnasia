@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import {
   computeAllAroundStandings,
@@ -168,6 +168,18 @@ export const LiveStandingsBoard: React.FC = () => {
     ).values()
   )
 
+  const availableApparatusCodes = useMemo(() => {
+    const fromScores = Array.from(new Set(scores.map((s) => s.apparatusCode))).filter(Boolean)
+    if (fromScores.length > 0) return fromScores
+    return ['VT', 'UB', 'BB', 'FX', 'PH', 'SR', 'PB', 'HB', 'HOOP', 'BALL', 'CLUBS', 'RIBBON', 'TRA', 'DMT', 'SPD', 'FR']
+  }, [scores])
+
+  useEffect(() => {
+    if (availableApparatusCodes.length > 0 && !availableApparatusCodes.includes(selectedApparatus)) {
+      setSelectedApparatus(availableApparatusCodes[0])
+    }
+  }, [availableApparatusCodes, selectedApparatus])
+
   const allAround = computeAllAroundStandings(scores, { categoryId: selectedCategory || undefined })
   const apparatusStandings = computeApparatusStandings(scores, selectedApparatus, selectedCategory || undefined)
   const teamStandings = computeTeamStandings(scores)
@@ -333,9 +345,9 @@ export const LiveStandingsBoard: React.FC = () => {
       </div>
 
       {tab === 'apparatus' && (
-        <div className="flex items-center gap-2">
-          <span className={`text-xs font-semibold ${isFullscreen ? 'text-slate-400' : 'text-slate-600'}`}>Aparato:</span>
-          {['VT', 'UB', 'BB', 'FX'].map((code) => (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={`text-xs font-semibold ${isFullscreen ? 'text-slate-400' : 'text-slate-600'}`}>Aparato / Evento:</span>
+          {availableApparatusCodes.map((code) => (
             <button
               key={code}
               type="button"

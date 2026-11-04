@@ -204,7 +204,7 @@ export interface Database {
       apparatuses: {
         Row: {
           id: string
-          discipline: 'GAF' | 'GAM' | 'GR' | 'TRA' | 'AER' | 'ACRO'
+          discipline: 'GAF' | 'GAM' | 'GR' | 'TRA' | 'AER' | 'ACRO' | 'PK'
           code: string
           name: string
           sort_order: number
@@ -212,7 +212,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          discipline: 'GAF' | 'GAM' | 'GR' | 'TRA' | 'AER' | 'ACRO'
+          discipline: 'GAF' | 'GAM' | 'GR' | 'TRA' | 'AER' | 'ACRO' | 'PK'
           code: string
           name: string
           sort_order?: number
@@ -220,7 +220,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          discipline?: 'GAF' | 'GAM' | 'GR' | 'TRA' | 'AER' | 'ACRO'
+          discipline?: 'GAF' | 'GAM' | 'GR' | 'TRA' | 'AER' | 'ACRO' | 'PK'
           code?: string
           name?: string
           sort_order?: number
@@ -232,7 +232,7 @@ export interface Database {
         Row: {
           id: string
           championship_id: string
-          discipline: 'GAF' | 'GAM' | 'GR' | 'TRA' | 'AER' | 'ACRO'
+          discipline: 'GAF' | 'GAM' | 'GR' | 'TRA' | 'AER' | 'ACRO' | 'PK'
           name: string
           code: string
           gender: 'female' | 'male' | 'mixed'
@@ -247,7 +247,7 @@ export interface Database {
         Insert: {
           id?: string
           championship_id: string
-          discipline?: 'GAF' | 'GAM' | 'GR' | 'TRA' | 'AER' | 'ACRO'
+          discipline?: 'GAF' | 'GAM' | 'GR' | 'TRA' | 'AER' | 'ACRO' | 'PK'
           name: string
           code: string
           gender?: 'female' | 'male' | 'mixed'
@@ -262,7 +262,7 @@ export interface Database {
         Update: {
           id?: string
           championship_id?: string
-          discipline?: 'GAF' | 'GAM' | 'GR' | 'TRA' | 'AER' | 'ACRO'
+          discipline?: 'GAF' | 'GAM' | 'GR' | 'TRA' | 'AER' | 'ACRO' | 'PK'
           name?: string
           code?: string
           gender?: 'female' | 'male' | 'mixed'
@@ -555,6 +555,11 @@ export interface Database {
           d_score: number
           e_scores: Json
           e_score_avg: number
+          a_score: number | null
+          tof_score: number | null
+          hd_score: number | null
+          time_seconds: number | null
+          penalty_seconds: number | null
           neutral_deductions: number
           final_score: number
           status: 'draft' | 'submitted' | 'provisional' | 'official_approved'
@@ -574,6 +579,11 @@ export interface Database {
           d_score: number
           e_scores?: Json
           e_score_avg: number
+          a_score?: number | null
+          tof_score?: number | null
+          hd_score?: number | null
+          time_seconds?: number | null
+          penalty_seconds?: number | null
           neutral_deductions?: number
           final_score: number
           status?: 'draft' | 'submitted' | 'provisional' | 'official_approved'
@@ -593,6 +603,11 @@ export interface Database {
           d_score?: number
           e_scores?: Json
           e_score_avg?: number
+          a_score?: number | null
+          tof_score?: number | null
+          hd_score?: number | null
+          time_seconds?: number | null
+          penalty_seconds?: number | null
           neutral_deductions?: number
           final_score?: number
           status?: 'draft' | 'submitted' | 'provisional' | 'official_approved'
@@ -735,7 +750,7 @@ export interface Database {
         | 'in_progress'
         | 'completed'
         | 'archived'
-      gymnastics_discipline_code: 'GAF' | 'GAM' | 'GR' | 'TRA' | 'AER' | 'ACRO'
+      gymnastics_discipline_code: 'GAF' | 'GAM' | 'GR' | 'TRA' | 'AER' | 'ACRO' | 'PK'
       gender_category: 'female' | 'male' | 'mixed'
     }
     CompositeTypes: {

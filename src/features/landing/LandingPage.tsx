@@ -476,43 +476,65 @@ export const LandingPage: React.FC<LandingPageProps> = ({ initialMode = 'landing
       </section>
 
       {/* =========================================================================
-          REGLAMENTOS & DISCIPLINAS
+          REGLAMENTOS & MULTI-DISCIPLINA FIG 2025-2028
          ========================================================================= */}
       <section className="rounded-3xl bg-slate-100/80 p-8 sm:p-12 border border-slate-200 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-700">Versatilidad Técnica</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-700">Versatilidad Técnica Multidisciplina</span>
             <h3 className="text-2xl font-black text-slate-900 mt-1">
-              Todos los códigos de puntuación y aparatos oficiales
+              Disponible para 7 disciplinas según normativas oficiales FIG
             </h3>
           </div>
-          <div className="flex gap-2">
-            <Badge variant="default" className="text-xs">GAF</Badge>
-            <Badge variant="outline" className="text-xs">GAM</Badge>
-            <Badge variant="outline" className="text-xs">USAG 1-10</Badge>
-            <Badge variant="outline" className="text-xs">Escolar</Badge>
+          <div className="flex flex-wrap gap-1.5">
+            <Badge variant="default" className="text-xs bg-blue-700">GAF</Badge>
+            <Badge variant="default" className="text-xs bg-blue-700">GAM</Badge>
+            <Badge variant="default" className="text-xs bg-purple-700">GR (Rítmica)</Badge>
+            <Badge variant="default" className="text-xs bg-sky-700">TRA (Trampolín)</Badge>
+            <Badge variant="default" className="text-xs bg-emerald-700">AER (Aeróbica)</Badge>
+            <Badge variant="default" className="text-xs bg-indigo-700">ACRO (Acrobática)</Badge>
+            <Badge variant="default" className="text-xs bg-amber-600">PK (Parkour FIG)</Badge>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
-            <h4 className="font-bold text-slate-900 text-sm">FIG Élite / Senior / Junior</h4>
-            <p className="text-xs text-slate-500">
-              Puntuación abierta libre con D-Score compuesto (dificultad + requisitos + enlaces) y E-Score con deducciones de ejecución.
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-100 text-[10px] font-bold text-blue-800">FIG</span>
+              <h4 className="font-bold text-slate-900 text-sm">Artística (GAF & GAM)</h4>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              4 aparatos femeninos y 6 masculinos. Cómputo oficial D + E - ND con regla de dos intentos en Salto (VT) y descarte de extremos.
             </p>
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
-            <h4 className="font-bold text-slate-900 text-sm">Rutinas Obligatorias (USAG 1 al 5)</h4>
-            <p className="text-xs text-slate-500">
-              Dificultad fija configurable (ej. D=10.000). Los jueces solo evalúan la ejecución técnica y deducciones neutras de línea/tiempo.
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-purple-100 text-[10px] font-bold text-purple-800">RG</span>
+              <h4 className="font-bold text-slate-900 text-sm">Rítmica (GR) & Aeróbica (AER)</h4>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Aro, Pelota, Mazas, Cinta, Manos Libres y Conjuntos. Evaluación tripartita reglamentaria: Dificultad (D) + Artística (A) + Ejecución (E).
             </p>
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
-            <h4 className="font-bold text-slate-900 text-sm">Niveles Escolares & Formativos</h4>
-            <p className="text-xs text-slate-500">
-              Bases técnicas simplificadas para copas escolares, festivales de gimnasia y encuentros interclubes formativos.
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-sky-100 text-[10px] font-bold text-sky-800">TRA</span>
+              <h4 className="font-bold text-slate-900 text-sm">Trampolín & Acrobática</h4>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Trampolín Individual, DMT, Tumbling y Sincronizado con Tiempo de Vuelo (ToF) y Desplazamiento Horizontal (HD), más rutinas Acrobáticas (Balance/Dinámico).
+            </p>
+          </div>
+
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-100 text-[10px] font-bold text-amber-800">PK</span>
+              <h4 className="font-bold text-slate-900 text-sm">Parkour FIG (Speed & Freestyle)</h4>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Modalidad Carrera de Velocidad (Speed) con registro electrónico de tiempos en segundos y penalizaciones de recorrido, más Estilo Libre (Freestyle).
             </p>
           </div>
         </div>

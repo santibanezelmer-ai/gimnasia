@@ -7,8 +7,16 @@ export type JudgePanelRole =
   | 'E4'
   | 'E5'
   | 'E6'
+  | 'A1'
+  | 'A2'
+  | 'A3'
+  | 'A4'
+  | 'TOF'
+  | 'HD'
   | 'LINE'
   | 'TIME'
+  | 'PK_TIME'
+  | 'PK_OBSTACLE'
 
 export type ScoreStatus =
   | 'draft'
@@ -48,6 +56,11 @@ export interface Score {
   dScore: number
   eScores: number[]
   eScoreAvg: number
+  aScore?: number          // Rhythmic (GR), Aerobic (AER), Acrobatic (ACRO)
+  tofScore?: number        // Trampoline Time of Flight (ToF)
+  hdScore?: number         // Trampoline Horizontal Displacement (HD)
+  timeSeconds?: number     // Parkour Speed raw run time (e.g. 23.450s)
+  penaltySeconds?: number  // Parkour Speed penalty seconds added
   neutralDeductions: number
   finalScore: number
   status: ScoreStatus

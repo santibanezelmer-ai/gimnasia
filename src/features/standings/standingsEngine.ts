@@ -15,11 +15,17 @@ export interface GymnastScoreEntry {
   clubName: string
   categoryId?: string
   categoryName?: string
+  discipline?: string
   scoringRegime?: 'free' | 'obligatory'
   apparatusCode: string
   attemptNumber?: number
   dScore: number
   eScoreAvg: number
+  aScore?: number
+  tofScore?: number
+  hdScore?: number
+  timeSeconds?: number
+  penaltySeconds?: number
   finalScore: number
   status: 'draft' | 'submitted' | 'provisional' | 'official_approved'
 }
@@ -50,7 +56,12 @@ export interface ApparatusStanding {
   categoryName?: string
   dScore: number
   eScoreAvg: number
+  aScore?: number
+  timeSeconds?: number
+  penaltySeconds?: number
   finalScore: number
+  isTimeBased?: boolean
+  unit?: string
   tieBreakInfo?: string
   vaultAttempts?: {
     attempt1?: { dScore: number; eScoreAvg: number; finalScore: number }
@@ -317,6 +328,9 @@ export function computeApparatusStandings(
     categoryName?: string
     dScore: number
     eScoreAvg: number
+    aScore?: number
+    timeSeconds?: number
+    penaltySeconds?: number
     finalScore: number
     vaultAttempts?: {
       attempt1?: { dScore: number; eScoreAvg: number; finalScore: number }
@@ -387,6 +401,9 @@ export function computeApparatusStandings(
         categoryName: g.categoryName,
         dScore,
         eScoreAvg,
+        aScore: undefined as number | undefined,
+        timeSeconds: undefined as number | undefined,
+        penaltySeconds: undefined as number | undefined,
         finalScore,
         vaultAttempts: {
           attempt1: g.attempt1 ? { dScore: g.attempt1.dScore, eScoreAvg: g.attempt1.eScoreAvg, finalScore: g.attempt1.finalScore } : undefined,
@@ -395,7 +412,7 @@ export function computeApparatusStandings(
       }
     })
   } else {
-    // For other apparatuses (UB, BB, FX), only attempt 1 is used
+    // For other apparatuses (UB, BB, FX, GR, TRA, AER, ACRO, PK), attempt 1 is used
     gymnastEntries = filtered
       .filter((s) => (s.attemptNumber ?? 1) === 1)
       .map((entry) => ({
@@ -407,16 +424,38 @@ export function computeApparatusStandings(
         categoryName: entry.categoryName,
         dScore: entry.dScore,
         eScoreAvg: entry.eScoreAvg,
+        aScore: entry.aScore,
+        timeSeconds: entry.timeSeconds,
+        penaltySeconds: entry.penaltySeconds,
         finalScore: entry.finalScore,
       }))
   }
+
+  const isTimeBased = apparatusCode === 'SPD' || filtered.some((s) => s.timeSeconds !== undefined)
 
   // Apparatus FIG Comparator
   const compareApparatus = (
     a: (typeof gymnastEntries)[0],
     b: (typeof gymnastEntries)[0]
   ): { diff: number; reason?: string } => {
-    // 0. Primary: Final Score
+    // Specialized Parkour Speed Logic (Least Time Wins)
+    if (isTimeBased) {
+      if (Math.abs(a.finalScore - b.finalScore) > 0.0001) {
+        return { diff: a.finalScore - b.finalScore }
+      }
+      // Tiebreak 1: Fewer penalty seconds
+      const aPen = a.penaltySeconds ?? 0
+      const bPen = b.penaltySeconds ?? 0
+      if (Math.abs(aPen - bPen) > 0.0001) {
+        return {
+          diff: aPen - bPen,
+          reason: `Desempate Parkour: Menos segundos de penalización (${Math.min(aPen, bPen).toFixed(3)}s vs ${Math.max(aPen, bPen).toFixed(3)}s)`,
+        }
+      }
+      return { diff: 0, reason: 'Empate oficial compartido (Tiempos y penalizaciones idénticos)' }
+    }
+
+    // 0. Primary: Final Score (Highest Wins)
     if (Math.abs(b.finalScore - a.finalScore) > 0.0001) {
       return { diff: b.finalScore - a.finalScore }
     }
@@ -468,7 +507,7 @@ export function computeApparatusStandings(
 
       if (comparison.diff === 0) {
         rank = previousRank
-        tieBreakInfo = 'Empate compartido (Reglamento FIG)'
+        tieBreakInfo = isTimeBased ? 'Empate en tiempo compartido (Reglamento FIG Parkour)' : 'Empate compartido (Reglamento FIG)'
       } else {
         if (Math.abs(entry.finalScore - prev.finalScore) < 0.0001) {
           tieBreakInfo = comparison.reason
@@ -488,6 +527,8 @@ export function computeApparatusStandings(
       rank,
       apparatusCode,
       ...entry,
+      isTimeBased,
+      unit: isTimeBased ? 's' : 'pts',
       tieBreakInfo,
       medal,
     })
