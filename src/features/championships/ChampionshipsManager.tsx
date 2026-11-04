@@ -349,25 +349,35 @@ export const ChampionshipsManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-blue-700" />
-            Campeonatos de la Organización
-          </h3>
-          <p className="text-xs text-slate-500">
-            Administra los torneos, reglamento técnico congelado, visibilidad y cronograma.
-          </p>
+      {/* Header with Title, Badges & Action */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 border border-blue-200/80 text-blue-700 shadow-2xs">
+            <Trophy className="h-6 w-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-black tracking-tight text-slate-900">
+                Campeonatos de la Organización
+              </h3>
+              <Badge variant="outline" className="text-[10px] font-bold">
+                {championships.length} {championships.length === 1 ? 'Torneo' : 'Torneos'}
+              </Badge>
+            </div>
+            <p className="text-xs text-slate-500 font-medium">
+              Administra torneos, bases técnicas, códigos de jurado/clubes y reglamentos FIG congelados.
+            </p>
+          </div>
         </div>
 
         {canManage && !isCreating && (
           <button
             type="button"
             onClick={() => setIsCreating(true)}
-            className="flex items-center gap-2 rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-800 transition-colors"
+            className="flex items-center gap-2 rounded-xl bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-800 transition-colors self-start sm:self-auto"
           >
             <Plus className="h-4 w-4" />
-            Nuevo Campeonato
+            <span>Nuevo Campeonato</span>
           </button>
         )}
       </div>
@@ -541,12 +551,29 @@ export const ChampionshipsManager: React.FC = () => {
       )}
 
       {isLoading ? (
-        <div className="py-8 text-center text-xs text-slate-500">Cargando campeonatos...</div>
+        <div className="py-12 text-center text-xs text-slate-500 font-medium flex items-center justify-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-blue-600 animate-ping" />
+          <span>Cargando campeonatos de la organización...</span>
+        </div>
       ) : championships.length === 0 ? (
-        <Card className="text-center py-8">
-          <Trophy className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-          <p className="text-sm font-semibold text-slate-700">No hay campeonatos creados aún</p>
-          <p className="text-xs text-slate-500 mt-1">Crea el primer campeonato para comenzar a configurar categorías y aparatos.</p>
+        <Card className="text-center py-12 px-6 border-dashed border-2 border-slate-200 bg-slate-50/50 rounded-2xl">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 mb-3 border border-blue-100 shadow-2xs">
+            <Trophy className="h-7 w-7" />
+          </div>
+          <h4 className="text-base font-bold text-slate-900">Aún no hay campeonatos en esta organización</h4>
+          <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+            Crea tu primer torneo oficial para generar los códigos de acceso de jurados, publicar las bases técnicas y habilitar las inscripciones online.
+          </p>
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => setIsCreating(true)}
+              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-800 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Crear Primer Campeonato</span>
+            </button>
+          )}
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

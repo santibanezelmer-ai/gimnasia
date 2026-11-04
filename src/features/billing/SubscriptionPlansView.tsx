@@ -63,14 +63,26 @@ export const SubscriptionPlansView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-          <Zap className="h-5 w-5 text-amber-500" />
-          Planes y Suscripción SaaS (Fase 12)
-        </h3>
-        <p className="text-xs text-slate-500">
-          Administración de suscripción, cupos deportivos y límites comerciales de la organización activa.
-        </p>
+      {/* Header with Title & Description */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 border border-amber-200/80 text-amber-700 shadow-2xs">
+            <Zap className="h-6 w-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-black tracking-tight text-slate-900">
+                Planes y Suscripción SaaS
+              </h3>
+              <Badge variant="outline" className="text-[10px] font-bold">
+                Multi-Tenant
+              </Badge>
+            </div>
+            <p className="text-xs text-slate-500 font-medium">
+              Administración de planes deportivos, cupos de gimnastas y límites comerciales de la organización.
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

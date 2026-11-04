@@ -22,6 +22,9 @@ import {
   Zap,
   LayoutDashboard,
   KeyRound,
+  ShieldCheck,
+  Activity,
+  Sparkles,
 } from 'lucide-react'
 
 const DashboardContent: React.FC = () => {
@@ -48,33 +51,42 @@ const DashboardContent: React.FC = () => {
     : { label: activeRole || 'Sin Rol', variant: 'outline' }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      {/* Top Header */}
-      <header className="border-b border-slate-200 bg-white sticky top-0 z-40">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3.5">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased selection:bg-blue-600 selection:text-white">
+      {/* Top Navigation Header */}
+      <header className="border-b border-slate-200/90 bg-white/95 backdrop-blur-md sticky top-0 z-40 shadow-2xs">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-3">
+          {/* Brand Logo & Name */}
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-700 text-white shadow-sm">
-              <Trophy className="h-6 w-6" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-700 via-blue-600 to-indigo-600 text-white shadow-sm ring-1 ring-blue-500/20">
+              <Trophy className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold tracking-tight text-slate-900">Operix Gymnastics</h1>
+                <h1 className="text-lg font-black tracking-tight text-slate-900">Operix Gymnastics</h1>
+                <span className="rounded-md bg-blue-50 border border-blue-200/70 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 tracking-wide">
+                  FIG 2025-2028
+                </span>
                 {profile?.platformRole === 'platform_admin' && (
-                  <Badge variant="danger" className="text-[10px]">SuperAdmin Plataforma</Badge>
+                  <Badge variant="danger" className="text-[10px] py-0 px-1.5">SuperAdmin</Badge>
                 )}
               </div>
-              <p className="text-xs text-slate-500">SaaS Multi-Tenant Gymnastics Championship Management</p>
+              <p className="text-[11px] text-slate-500 font-medium hidden sm:block">
+                Plataforma de Campeonatos & Puntuación Oficial de Gimnasia
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          {/* User Controls & Tenant Switcher */}
+          <div className="flex items-center gap-3">
             {user ? (
               <div className="flex items-center gap-3">
                 <TenantSwitcher />
-                <div className="text-right hidden sm:block">
-                  <p className="text-xs font-semibold text-slate-800">{profile?.fullName || user.email}</p>
+                <div className="text-right hidden sm:block border-l border-slate-200 pl-3">
+                  <p className="text-xs font-bold text-slate-900 leading-tight truncate max-w-[150px]">
+                    {profile?.fullName || user.email}
+                  </p>
                   <div className="flex items-center justify-end gap-1.5 mt-0.5">
-                    <Badge variant={currentRoleInfo.variant} className="text-[9px] py-0 px-1">
+                    <Badge variant={currentRoleInfo.variant} className="text-[9px] py-0 px-1.5 font-bold">
                       {currentRoleInfo.label}
                     </Badge>
                   </div>
@@ -83,28 +95,33 @@ const DashboardContent: React.FC = () => {
                   type="button"
                   onClick={() => signOut()}
                   title="Cerrar Sesión"
-                  className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                  className="rounded-xl border border-slate-200/90 p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs"
                 >
                   <LogOut className="h-4 w-4" />
                 </button>
               </div>
             ) : (
-              <Badge variant="outline">Modo Invitado / Auth Requerida</Badge>
+              <div className="flex items-center gap-2">
+                <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 border border-slate-200">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Acceso Público & Torneos
+                </span>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Navigation Tabs (Scoped strictly by role) */}
+        {/* Scoped Navigation Tabs Bar */}
         {user && activeOrganization && (
-          <div className="border-t border-slate-100 bg-slate-50/50 px-6">
-            <div className="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto py-2 text-xs">
+          <div className="border-t border-slate-100 bg-slate-50/70 px-4 sm:px-6">
+            <div className="mx-auto flex max-w-7xl items-center gap-1.5 overflow-x-auto py-2 text-xs scrollbar-none">
               <button
                 type="button"
                 onClick={() => setActiveTab('overview')}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 font-semibold transition-all ${
                   activeTab === 'overview'
-                    ? 'bg-blue-700 text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-200/60'
+                    ? 'bg-blue-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900'
                 }`}
               >
                 <LayoutDashboard className="h-4 w-4" />
@@ -115,10 +132,10 @@ const DashboardContent: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setActiveTab('championships')}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
+                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 font-semibold transition-all ${
                     activeTab === 'championships'
-                      ? 'bg-blue-700 text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-200/60'
+                      ? 'bg-blue-700 text-white shadow-xs'
+                      : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900'
                   }`}
                 >
                   <Trophy className="h-4 w-4" />
@@ -130,10 +147,10 @@ const DashboardContent: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setActiveTab('delegations')}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
+                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 font-semibold transition-all ${
                     activeTab === 'delegations'
-                      ? 'bg-blue-700 text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-200/60'
+                      ? 'bg-blue-700 text-white shadow-xs'
+                      : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900'
                   }`}
                 >
                   <Users className="h-4 w-4" />
@@ -145,10 +162,10 @@ const DashboardContent: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setActiveTab('judging')}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
+                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 font-semibold transition-all ${
                     activeTab === 'judging'
-                      ? 'bg-blue-700 text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-200/60'
+                      ? 'bg-blue-700 text-white shadow-xs'
+                      : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900'
                   }`}
                 >
                   <Award className="h-4 w-4" />
@@ -159,27 +176,31 @@ const DashboardContent: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab('standings')}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 font-semibold transition-all relative ${
                   activeTab === 'standings'
-                    ? 'bg-blue-700 text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-200/60'
+                    ? 'bg-blue-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900'
                 }`}
               >
-                <Flame className="h-4 w-4 text-orange-600" />
+                <Flame className={`h-4 w-4 ${activeTab === 'standings' ? 'text-amber-300' : 'text-orange-500'}`} />
                 <span>Resultados en Vivo</span>
+                <span className="flex h-2 w-2 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500" />
+                </span>
               </button>
 
               {(activeRole === 'org_admin' || profile?.platformRole === 'platform_admin') && (
                 <button
                   type="button"
                   onClick={() => setActiveTab('billing')}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
+                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 font-semibold transition-all ${
                     activeTab === 'billing'
-                      ? 'bg-blue-700 text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-200/60'
+                      ? 'bg-blue-700 text-white shadow-xs'
+                      : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900'
                   }`}
                 >
-                  <Zap className="h-4 w-4 text-amber-500" />
+                  <Zap className={`h-4 w-4 ${activeTab === 'billing' ? 'text-amber-300' : 'text-amber-500'}`} />
                   <span>Planes SaaS</span>
                 </button>
               )}
@@ -188,47 +209,60 @@ const DashboardContent: React.FC = () => {
         )}
       </header>
 
-      {/* Main Content Area */}
-      <main className="mx-auto max-w-7xl px-6 py-8">
+      {/* Main Content Viewport */}
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
         {!user ? (
-          <div className="py-4">
-            <div className="max-w-md mx-auto mb-6 text-center">
-              <h2 className="text-2xl font-bold text-slate-900">Operix Gymnastics</h2>
-              <p className="mt-1 text-xs text-slate-600">
-                Plataforma de campeonatos y puntuación FIG para clubes y federaciones.
+          <div className="py-2">
+            {/* Modern Guest Hero Header */}
+            <div className="max-w-xl mx-auto mb-8 text-center space-y-3">
+              <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-xs font-bold text-blue-700 shadow-2xs">
+                <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+                SaaS Multiempresa de Gimnasia Deportiva
+              </div>
+              <h2 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
+                Operix Gymnastics
+              </h2>
+              <p className="text-sm text-slate-600 max-w-md mx-auto">
+                Selecciona tu modo de acceso para administrar torneos, puntuar como jurado o seguir las clasificaciones en directo.
               </p>
 
-              {/* Fast Switcher between Club Auth, Judge Fast PIN, and Live Results */}
-              <div className="mt-4 inline-flex rounded-xl border border-slate-200 bg-white p-1 text-xs shadow-xs">
+              {/* Segmented Switcher for Guest Access */}
+              <div className="mt-6 inline-flex rounded-2xl border border-slate-200/90 bg-white p-1.5 text-xs shadow-xs">
                 <button
                   type="button"
                   onClick={() => setAuthMode('login')}
-                  className={`rounded-lg px-3 py-1.5 font-semibold transition-colors flex items-center gap-1.5 ${
-                    authMode === 'login' ? 'bg-blue-700 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  className={`rounded-xl px-4 py-2 font-bold transition-all flex items-center gap-2 ${
+                    authMode === 'login'
+                      ? 'bg-blue-700 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <Building2 className="h-3.5 w-3.5" />
-                  Club / Federación
+                  <Building2 className="h-4 w-4" />
+                  <span>Club / Federación</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setAuthMode('fast_judge')}
-                  className={`rounded-lg px-3 py-1.5 font-semibold transition-colors flex items-center gap-1.5 ${
-                    authMode === 'fast_judge' ? 'bg-indigo-700 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  className={`rounded-xl px-4 py-2 font-bold transition-all flex items-center gap-2 ${
+                    authMode === 'fast_judge'
+                      ? 'bg-indigo-700 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <KeyRound className="h-3.5 w-3.5" />
-                  Acceso Juez (Con Código)
+                  <KeyRound className="h-4 w-4" />
+                  <span>Acceso Juez (Con Código)</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setAuthMode('live_standings')}
-                  className={`rounded-lg px-3 py-1.5 font-semibold transition-colors flex items-center gap-1.5 ${
-                    authMode === 'live_standings' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  className={`rounded-xl px-4 py-2 font-bold transition-all flex items-center gap-2 ${
+                    authMode === 'live_standings'
+                      ? 'bg-orange-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <Flame className="h-3.5 w-3.5" />
-                  Resultados en Vivo
+                  <Flame className="h-4 w-4" />
+                  <span>Resultados en Vivo</span>
                 </button>
               </div>
             </div>
@@ -238,28 +272,43 @@ const DashboardContent: React.FC = () => {
             {authMode === 'live_standings' && <LiveStandingsBoard />}
           </div>
         ) : (
-          <div className="space-y-8">
-            {/* Active Tenant Overview Banner */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-blue-700">Organización Activa</span>
-                    <Badge variant={currentRoleInfo.variant}>{currentRoleInfo.label}</Badge>
-                    <span className="text-xs text-slate-400 font-mono">Plan: {activeOrganization?.billingPlan?.toUpperCase() || 'FREE'}</span>
+          <div className="space-y-6 sm:space-y-8">
+            {/* Modern Organization Command Center Banner */}
+            <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-white via-slate-50/70 to-blue-50/20 p-5 sm:p-6 shadow-xs">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">
+                      Organización Activa
+                    </span>
+                    <Badge variant={currentRoleInfo.variant} className="text-[10px] font-bold">
+                      {currentRoleInfo.label}
+                    </Badge>
+                    <span className="rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-[10px] font-mono font-bold text-slate-700">
+                      Plan: {activeOrganization?.billingPlan?.toUpperCase() || 'FREE'}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200/80 rounded-md px-2 py-0.5">
+                      <ShieldCheck className="h-3 w-3 text-emerald-600" /> Aislamiento RLS Activo
+                    </span>
                   </div>
-                  <h2 className="mt-1 text-2xl font-bold text-slate-900">
+                  <h2 className="text-2xl font-black tracking-tight text-slate-900">
                     {activeOrganization ? activeOrganization.name : 'No tienes una organización seleccionada'}
                   </h2>
-                  <p className="text-xs text-slate-500 font-mono mt-0.5">
-                    ID: {activeOrganization ? activeOrganization.id : 'N/A'} • Slug: {activeOrganization?.slug || 'N/A'}
+                  <p className="text-xs text-slate-500 font-mono">
+                    ID: {activeOrganization ? activeOrganization.id : 'N/A'} · Slug: {activeOrganization?.slug || 'N/A'}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 border border-slate-200 text-xs">
-                    <Building2 className="h-4 w-4 text-slate-600" />
-                    <span>Membresías activas: <strong>{organizations.length}</strong></span>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2 rounded-xl bg-white px-3.5 py-2 border border-slate-200 text-xs shadow-2xs">
+                    <Building2 className="h-4 w-4 text-slate-500" />
+                    <span className="text-slate-600">Membresías:</span>
+                    <strong className="text-slate-900 font-bold">{organizations.length}</strong>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-xl bg-white px-3.5 py-2 border border-slate-200 text-xs shadow-2xs">
+                    <Activity className="h-4 w-4 text-emerald-500" />
+                    <span className="text-slate-600">Motor FIG:</span>
+                    <strong className="text-emerald-700 font-bold">2025-2028 Conforme</strong>
                   </div>
                 </div>
               </div>
@@ -336,3 +385,4 @@ export const App: React.FC = () => {
 }
 
 export default App
+

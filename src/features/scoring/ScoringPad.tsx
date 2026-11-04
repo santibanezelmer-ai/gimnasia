@@ -188,25 +188,34 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({ onScoreSaved }) => {
   }
 
   return (
-    <Card className="border-slate-200 bg-white shadow-sm">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 mb-4 gap-3">
+    <Card className="border-slate-200/90 bg-white shadow-sm p-5 sm:p-6 rounded-2xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 mb-5 gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
-            <Calculator className="h-5 w-5" />
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 border border-blue-200/80 text-blue-700 shadow-2xs">
+            <Calculator className="h-6 w-6" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-slate-900">Mesa de Jurado & Captura Oficial</h4>
-            <p className="text-xs text-slate-500">Terminal FIG 2025-2028 con descarte de extremos y transmisión Realtime</p>
+            <div className="flex items-center gap-2">
+              <h4 className="text-base font-black tracking-tight text-slate-900">
+                Mesa de Jurado FIG & Captura Oficial
+              </h4>
+              <Badge variant={isObligatory ? 'default' : 'outline'} className="text-[10px] font-bold">
+                {isObligatory ? 'D Fija (USAG / Escolar)' : 'FIG Libre (D + E)'}
+              </Badge>
+            </div>
+            <p className="text-xs text-slate-500 font-medium">
+              Terminal conforme a la normativa FIG 2025-2028 con descarte de extremos y transmisión Realtime a mesa central.
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           {/* Regime Selector */}
-          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs">
+          <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1 text-xs shadow-2xs">
             <button
               type="button"
               onClick={() => setIsObligatory(false)}
-              className={`rounded-md px-2.5 py-1 font-medium transition-colors ${
+              className={`rounded-lg px-3 py-1.5 font-bold transition-all ${
                 !isObligatory ? 'bg-blue-700 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -215,17 +224,13 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({ onScoreSaved }) => {
             <button
               type="button"
               onClick={() => setIsObligatory(true)}
-              className={`rounded-md px-2.5 py-1 font-medium transition-colors ${
+              className={`rounded-lg px-3 py-1.5 font-bold transition-all ${
                 isObligatory ? 'bg-indigo-700 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Rutina Establecida (Solo E)
             </button>
           </div>
-
-          <Badge variant={isObligatory ? 'default' : 'outline'} className="text-[10px]">
-            {isObligatory ? 'D Fija' : 'FIG D+E'}
-          </Badge>
         </div>
       </div>
 

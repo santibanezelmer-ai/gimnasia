@@ -453,28 +453,36 @@ export const ClubManagerView: React.FC<ClubManagerViewProps> = ({ onCreateChampi
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <Users className="h-5 w-5 text-emerald-600" />
-            Portal Autónomo del Club: Plantel & Delegaciones
-          </h3>
-          <p className="text-xs text-slate-500">
-            Cada club sube y gestiona su propia nómina de deportistas, e inscribe libremente a sus gimnastas en las competiciones.
-          </p>
+      {/* Header with Title, Club Badge & Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-700 shadow-2xs">
+            <Users className="h-6 w-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-black tracking-tight text-slate-900">
+                Portal Autónomo del Club: Plantel & Delegaciones
+              </h3>
+              <Badge variant="default" className="bg-emerald-700 text-white font-bold text-[10px]">
+                {clubName}
+              </Badge>
+            </div>
+            <p className="text-xs text-slate-500 font-medium">
+              Gestiona el plantel oficial de gimnastas, licencias federativas e inscripciones a torneos activos.
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Badge variant="default" className="bg-emerald-700 text-white font-semibold">
-            {clubName}
-          </Badge>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
             type="button"
             onClick={loadClubData}
-            className="rounded-lg border border-slate-300 bg-white p-1.5 text-slate-600 hover:bg-slate-50 shadow-2xs"
+            title="Refrescar datos del club"
+            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition-colors"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span>Actualizar</span>
           </button>
         </div>
       </div>

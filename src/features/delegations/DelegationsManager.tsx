@@ -171,25 +171,38 @@ export const DelegationsManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <Shield className="h-5 w-5 text-indigo-700" />
-            Clubes & Padrón de Deportistas
-          </h3>
-          <p className="text-xs text-slate-500">
-            Registro y gestión de delegaciones, gimnastas y licencias con aislamiento estricto de datos.
-          </p>
+      {/* Header with Title, Badges & Action */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 border border-indigo-200/80 text-indigo-700 shadow-2xs">
+            <Shield className="h-6 w-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-black tracking-tight text-slate-900">
+                Clubes & Padrón de Deportistas
+              </h3>
+              <Badge variant="outline" className="text-[10px] font-bold">
+                {clubs.length} {clubs.length === 1 ? 'Club' : 'Clubes'}
+              </Badge>
+              <Badge variant="outline" className="text-[10px] font-bold">
+                {gymnasts.length} {gymnasts.length === 1 ? 'Deportista' : 'Deportistas'}
+              </Badge>
+            </div>
+            <p className="text-xs text-slate-500 font-medium">
+              Registro y gestión de delegaciones, gimnastas y licencias con aislamiento estricto de datos.
+            </p>
+          </div>
         </div>
 
         {canManageClubs && !isCreatingClub && (
           <button
             type="button"
             onClick={() => setIsCreatingClub(true)}
-            className="flex items-center gap-2 rounded-lg bg-indigo-700 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-800 transition-colors"
+            className="flex items-center gap-2 rounded-xl bg-indigo-700 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-indigo-800 transition-colors self-start sm:self-auto"
           >
             <Plus className="h-4 w-4" />
-            Nuevo Club / Delegación
+            <span>Nuevo Club / Delegación</span>
           </button>
         )}
       </div>
@@ -268,8 +281,20 @@ export const DelegationsManager: React.FC = () => {
           {isLoading ? (
             <p className="text-xs text-slate-400">Cargando clubes...</p>
           ) : clubs.length === 0 ? (
-            <Card className="text-center py-6">
-              <p className="text-xs text-slate-500">No hay clubes registrados.</p>
+            <Card className="text-center py-8 px-4 border-dashed border-2 border-slate-200 bg-slate-50/50 rounded-2xl">
+              <Shield className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+              <p className="text-xs font-bold text-slate-700">No hay clubes registrados</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Registra el primer club para gestionar sus gimnastas.</p>
+              {canManageClubs && (
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingClub(true)}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-indigo-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-indigo-800"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Nuevo Club</span>
+                </button>
+              )}
             </Card>
           ) : (
             <div className="space-y-2">
@@ -397,14 +422,26 @@ export const DelegationsManager: React.FC = () => {
           )}
 
           {!selectedClubId ? (
-            <Card className="text-center py-8">
-              <Users className="mx-auto h-7 w-7 text-slate-300 mb-2" />
-              <p className="text-xs text-slate-500">Selecciona un club para ver sus deportistas.</p>
+            <Card className="text-center py-12 border-dashed border-2 border-slate-200 bg-slate-50/50 rounded-2xl">
+              <Users className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+              <p className="text-sm font-bold text-slate-700">Selecciona un Club de la Lista</p>
+              <p className="text-xs text-slate-500 mt-1">Haz clic en un club de la columna izquierda para ver su padrón de gimnastas.</p>
             </Card>
           ) : activeClubGymnasts.length === 0 ? (
-            <Card className="text-center py-8">
-              <UserCheck className="mx-auto h-7 w-7 text-slate-300 mb-2" />
-              <p className="text-xs text-slate-500">Este club no tiene gimnastas registradas aún.</p>
+            <Card className="text-center py-12 border-dashed border-2 border-slate-200 bg-slate-50/50 rounded-2xl">
+              <UserCheck className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+              <p className="text-sm font-bold text-slate-700">Este club aún no tiene gimnastas inscritas</p>
+              <p className="text-xs text-slate-500 mt-1">Registra deportistas en este club para poder inscribirlas a los campeonatos.</p>
+              {!isCreatingGymnast && (
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingGymnast(true)}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-800"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Inscribir Primera Deportista</span>
+                </button>
+              )}
             </Card>
           ) : (
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">

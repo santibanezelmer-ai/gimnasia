@@ -300,33 +300,38 @@ export const FastJudgeTerminal: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Judge Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-indigo-200 bg-indigo-50/40 p-4 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2">
-            <Badge variant="default" className="bg-indigo-700 text-[10px] text-white">
-              Jurado Oficial
-            </Badge>
-            <span className="text-xs font-mono font-bold text-slate-800">
-              Torneo: {session.championshipName}
-            </span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50/60 via-white to-purple-50/30 p-4 sm:p-5 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-100/80 border border-indigo-200 text-indigo-700 shadow-2xs">
+            <Award className="h-6 w-6" />
           </div>
-          <h3 className="text-base font-bold text-slate-900 mt-0.5 flex items-center gap-2">
-            <Award className="h-5 w-5 text-indigo-700" />
-            Juez: {session.judgeName}
-          </h3>
+          <div>
+            <div className="flex items-center gap-2">
+              <Badge variant="default" className="bg-indigo-700 text-[10px] text-white font-bold">
+                Jurado de Pista
+              </Badge>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {session.championshipName}
+              </span>
+            </div>
+            <h3 className="text-base font-black tracking-tight text-slate-900 mt-0.5">
+              Juez Oficial: {session.judgeName}
+            </h3>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Badge variant="success" className="text-[10px] flex items-center gap-1">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Badge variant="success" className="text-[10px] flex items-center gap-1 font-bold">
             <Radio className="h-3 w-3 animate-pulse text-emerald-600" /> Transmisión Directa
           </Badge>
           <button
             type="button"
             onClick={handleLogout}
-            className="flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-50"
+            title="Cerrar sesión de juez"
+            className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs"
           >
             <LogOut className="h-3.5 w-3.5" />
-            Salir
+            <span>Salir</span>
           </button>
         </div>
       </div>

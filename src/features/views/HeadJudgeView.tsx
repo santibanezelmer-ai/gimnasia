@@ -219,42 +219,47 @@ export const HeadJudgeView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Award className="h-5 w-5 text-indigo-600" />
-              Consola del Juez Árbitro (Head Judge)
-            </h3>
-            {isRealtimeActive ? (
-              <Badge variant="success" className="text-[10px] flex items-center gap-1">
-                <Radio className="h-3 w-3 animate-pulse text-emerald-600" /> Transmisión En Vivo
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="text-[10px]">Conectando...</Badge>
-            )}
+      {/* Header with Title, Realtime Status & Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 border border-amber-200/80 text-amber-700 shadow-2xs">
+            <Award className="h-6 w-6" />
           </div>
-          <p className="text-xs text-slate-500">
-            Revisión oficial, firma digital de actas y resolución de apelaciones técnicas con sincronización Realtime.
-          </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-black tracking-tight text-slate-900">
+                Consola del Juez Árbitro (Superior Jury)
+              </h3>
+              {isRealtimeActive ? (
+                <Badge variant="success" className="text-[10px] flex items-center gap-1 font-bold">
+                  <Radio className="h-3 w-3 animate-pulse text-emerald-600" /> Realtime Sincronizado
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px]">Conectando...</Badge>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 font-medium">
+              Revisión oficial de notas FIG, aprobación de resultados, resolución de apelaciones y actas.
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
             type="button"
             onClick={loadScores}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm"
+            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition-colors"
           >
             <RefreshCw className="h-3.5 w-3.5" />
-            Actualizar
+            <span>Actualizar</span>
           </button>
           <button
             type="button"
             onClick={handleExportPDF}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm"
+            className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-800 shadow-2xs transition-colors"
           >
             <Download className="h-3.5 w-3.5" />
-            Exportar Acta Oficial PDF
+            <span>Exportar Acta Oficial</span>
           </button>
         </div>
       </div>
