@@ -150,22 +150,21 @@ BEGIN
     'gender', gender,
     'scoring_regime', scoring_regime,
     'default_fixed_d_score', default_fixed_d_score
-  )), '[]'::jsonb)
+  ) ORDER BY sort_order), '[]'::jsonb)
   INTO v_categories
   FROM public.categories
   WHERE championship_id = v_champ.id;
 
-  -- Apparatuses for GAF
+  -- Apparatuses for GAF (Ordered inside jsonb_agg)
   SELECT COALESCE(jsonb_agg(jsonb_build_object(
     'id', id,
     'code', code,
     'name', name,
     'discipline', discipline
-  )), '[]'::jsonb)
+  ) ORDER BY sort_order), '[]'::jsonb)
   INTO v_apparatuses
   FROM public.apparatuses
-  WHERE discipline = 'GAF'
-  ORDER BY sort_order;
+  WHERE discipline = 'GAF';
 
   -- Approved Registrations with Gymnast & Club
   SELECT COALESCE(jsonb_agg(jsonb_build_object(
@@ -177,7 +176,7 @@ BEGIN
     'category_name', cat.name,
     'scoring_regime', cat.scoring_regime,
     'default_fixed_d_score', cat.default_fixed_d_score
-  )), '[]'::jsonb)
+  ) ORDER BY g.last_name, g.first_name), '[]'::jsonb)
   INTO v_registrations
   FROM public.registrations r
   JOIN public.gymnasts g ON g.id = r.gymnast_id
