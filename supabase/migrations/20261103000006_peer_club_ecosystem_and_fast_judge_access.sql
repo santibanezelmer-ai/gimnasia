@@ -150,40 +150,61 @@ BEGIN
     'gender', gender,
     'scoring_regime', scoring_regime,
     'default_fixed_d_score', default_fixed_d_score
-  ) ORDER BY sort_order), '[]'::jsonb)
+  )), '[]'::jsonb)
   INTO v_categories
-  FROM public.categories
-  WHERE championship_id = v_champ.id;
+  FROM (
+    SELECT id, name, code, discipline, gender, scoring_regime, default_fixed_d_score
+    FROM public.categories
+    WHERE championship_id = v_champ.id
+    ORDER BY sort_order
+  ) c;
 
-  -- Apparatuses for GAF (Ordered inside jsonb_agg)
+  -- Apparatuses for GAF
   SELECT COALESCE(jsonb_agg(jsonb_build_object(
     'id', id,
     'code', code,
     'name', name,
     'discipline', discipline
-  ) ORDER BY sort_order), '[]'::jsonb)
+  )), '[]'::jsonb)
   INTO v_apparatuses
-  FROM public.apparatuses
-  WHERE discipline = 'GAF';
+  FROM (
+    SELECT id, code, name, discipline
+    FROM public.apparatuses
+    WHERE discipline = 'GAF'
+    ORDER BY sort_order
+  ) a;
 
   -- Approved Registrations with Gymnast & Club
   SELECT COALESCE(jsonb_agg(jsonb_build_object(
-    'id', r.id,
-    'bib_number', r.bib_number,
-    'rotation_group', r.rotation_group,
-    'gymnast_name', g.first_name || ' ' || g.last_name,
-    'club_name', c.name,
-    'category_name', cat.name,
-    'scoring_regime', cat.scoring_regime,
-    'default_fixed_d_score', cat.default_fixed_d_score
-  ) ORDER BY g.last_name, g.first_name), '[]'::jsonb)
+    'id', sub.id,
+    'bib_number', sub.bib_number,
+    'rotation_group', sub.rotation_group,
+    'gymnast_name', sub.first_name || ' ' || sub.last_name,
+    'club_name', sub.club_name,
+    'category_name', sub.category_name,
+    'scoring_regime', sub.scoring_regime,
+    'default_fixed_d_score', sub.default_fixed_d_score
+  )), '[]'::jsonb)
   INTO v_registrations
-  FROM public.registrations r
-  JOIN public.gymnasts g ON g.id = r.gymnast_id
-  JOIN public.clubs c ON c.id = r.club_id
-  LEFT JOIN public.categories cat ON cat.id = r.category_id
-  WHERE r.championship_id = v_champ.id
-    AND r.status = 'approved';
+  FROM (
+    SELECT 
+      r.id,
+      r.bib_number,
+      r.rotation_group,
+      g.first_name,
+      g.last_name,
+      c.name AS club_name,
+      cat.name AS category_name,
+      cat.scoring_regime,
+      cat.default_fixed_d_score
+    FROM public.registrations r
+    JOIN public.gymnasts g ON g.id = r.gymnast_id
+    JOIN public.clubs c ON c.id = r.club_id
+    LEFT JOIN public.categories cat ON cat.id = r.category_id
+    WHERE r.championship_id = v_champ.id
+      AND r.status = 'approved'
+    ORDER BY g.last_name, g.first_name
+  ) sub;
 
   RETURN jsonb_build_object(
     'championship', row_to_json(v_champ),
