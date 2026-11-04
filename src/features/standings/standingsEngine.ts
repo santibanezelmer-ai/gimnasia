@@ -35,6 +35,7 @@ export interface AllAroundStanding {
   apparatusScores: Record<string, number>
   totalScore: number
   totalEScore: number
+  tieBreakInfo?: string
   medal?: 'gold' | 'silver' | 'bronze'
 }
 
@@ -50,6 +51,7 @@ export interface ApparatusStanding {
   dScore: number
   eScoreAvg: number
   finalScore: number
+  tieBreakInfo?: string
   vaultAttempts?: {
     attempt1?: { dScore: number; eScoreAvg: number; finalScore: number }
     attempt2?: { dScore: number; eScoreAvg: number; finalScore: number }
@@ -64,6 +66,7 @@ export interface TeamStanding {
   totalScore: number
   apparatusTotals: Record<string, number>
   participatingGymnastsCount: number
+  tieBreakInfo?: string
   trophy?: '1st' | '2nd' | '3rd'
 }
 
@@ -71,10 +74,15 @@ export interface TeamStanding {
  * Computes All-Around Individual Standings from approved/provisional scores.
  * Can be filtered by categoryId to prevent mixing Olympic/Free and Obligatory regimes.
  * 
- * FIG Official Rule: For All-Around, only Vault 1 (attempt 1) counts.
- * Tiebreaker:
- * 1. Sum of 3 highest apparatus scores (in GAF).
- * 2. Higher total E-score sum.
+ * FIG Official Rule 2025-2028 (Technical Regulations Section 2, Article 5.3):
+ * 1. For All-Around, only Vault 1 (attempt 1) counts.
+ * 2. Strict Tie-Breaking Cascade:
+ *    - Step 1: Highest sum of the 3 highest apparatus scores (in GAF).
+ *    - Step 2: Highest sum of the 2 highest apparatus scores.
+ *    - Step 3: Highest single apparatus score.
+ *    - Step 4: Highest total Execution score (E-Score sum).
+ *    - Step 5: Highest single apparatus Execution score.
+ *    - Unbroken Tie: Gymnasts share the rank and medal (e.g. dual Gold), next rank skipped.
  */
 export function computeAllAroundStandings(
   scores: GymnastScoreEntry[],
@@ -101,6 +109,7 @@ export function computeAllAroundStandings(
       categoryId?: string
       categoryName?: string
       apparatusScores: Record<string, number>
+      apparatusEScores: Record<string, number>
       totalScore: number
       totalEScore: number
     }
@@ -121,6 +130,7 @@ export function computeAllAroundStandings(
         categoryId: s.categoryId,
         categoryName: s.categoryName,
         apparatusScores: {},
+        apparatusEScores: {},
         totalScore: 0,
         totalEScore: 0,
       })
@@ -130,44 +140,129 @@ export function computeAllAroundStandings(
     // Prevent duplicate attempt 1 records if any
     if (current.apparatusScores[s.apparatusCode] === undefined) {
       current.apparatusScores[s.apparatusCode] = s.finalScore
+      current.apparatusEScores[s.apparatusCode] = s.eScoreAvg
       current.totalScore = Math.round((current.totalScore + s.finalScore) * 1000) / 1000
       current.totalEScore = Math.round((current.totalEScore + s.eScoreAvg) * 1000) / 1000
     }
   }
 
-  // Sort descending by total score, then tiebreak by FIG Technical Regulations:
-  // 1. Highest sum of top 3 apparatus scores
-  // 2. Highest total E-score
-  const sorted = Array.from(gymnastMap.entries())
-    .map(([gymnastId, data]) => ({
-      gymnastId,
-      ...data,
-    }))
-    .sort((a, b) => {
-      if (b.totalScore !== a.totalScore) {
-        return b.totalScore - a.totalScore
+  // FIG Official Comparator with Tie-Breaking Cascade
+  const compareAllAround = (
+    a: {
+      totalScore: number
+      apparatusScores: Record<string, number>
+      apparatusEScores: Record<string, number>
+      totalEScore: number
+    },
+    b: {
+      totalScore: number
+      apparatusScores: Record<string, number>
+      apparatusEScores: Record<string, number>
+      totalEScore: number
+    }
+  ): { diff: number; reason?: string } => {
+    // 0. Primary: Total Score
+    if (Math.abs(b.totalScore - a.totalScore) > 0.0001) {
+      return { diff: b.totalScore - a.totalScore }
+    }
+
+    // Step 1: Highest sum of the 3 highest apparatus scores
+    const aVals = Object.values(a.apparatusScores).sort((x, y) => y - x)
+    const bVals = Object.values(b.apparatusScores).sort((x, y) => y - x)
+    const aTop3 = Math.round(aVals.slice(0, 3).reduce((acc, curr) => acc + curr, 0) * 1000) / 1000
+    const bTop3 = Math.round(bVals.slice(0, 3).reduce((acc, curr) => acc + curr, 0) * 1000) / 1000
+    if (Math.abs(bTop3 - aTop3) > 0.0001) {
+      return {
+        diff: bTop3 - aTop3,
+        reason: `Desempate FIG: Suma 3 mejores aparatos (${Math.max(aTop3, bTop3).toFixed(3)} vs ${Math.min(aTop3, bTop3).toFixed(3)})`,
       }
+    }
 
-      // FIG Art. 5.3: Top 3 apparatus scores sum
-      const aVals = Object.values(a.apparatusScores).sort((x, y) => y - x)
-      const bVals = Object.values(b.apparatusScores).sort((x, y) => y - x)
-      const aTop3 = Math.round(aVals.slice(0, 3).reduce((acc, curr) => acc + curr, 0) * 1000) / 1000
-      const bTop3 = Math.round(bVals.slice(0, 3).reduce((acc, curr) => acc + curr, 0) * 1000) / 1000
-      if (bTop3 !== aTop3) {
-        return bTop3 - aTop3
+    // Step 2: Highest sum of the 2 highest apparatus scores
+    const aTop2 = Math.round(aVals.slice(0, 2).reduce((acc, curr) => acc + curr, 0) * 1000) / 1000
+    const bTop2 = Math.round(bVals.slice(0, 2).reduce((acc, curr) => acc + curr, 0) * 1000) / 1000
+    if (Math.abs(bTop2 - aTop2) > 0.0001) {
+      return {
+        diff: bTop2 - aTop2,
+        reason: `Desempate FIG: Suma 2 mejores aparatos (${Math.max(aTop2, bTop2).toFixed(3)} vs ${Math.min(aTop2, bTop2).toFixed(3)})`,
       }
+    }
 
-      return b.totalEScore - a.totalEScore
-    })
+    // Step 3: Highest single apparatus score
+    const aTop1 = aVals[0] ?? 0
+    const bTop1 = bVals[0] ?? 0
+    if (Math.abs(bTop1 - aTop1) > 0.0001) {
+      return {
+        diff: bTop1 - aTop1,
+        reason: `Desempate FIG: Mayor nota en un solo aparato (${Math.max(aTop1, bTop1).toFixed(3)} vs ${Math.min(aTop1, bTop1).toFixed(3)})`,
+      }
+    }
 
-  return sorted.map((entry, index) => {
-    const rank = index + 1
+    // Step 4: Highest total Execution score (E-Score sum)
+    if (Math.abs(b.totalEScore - a.totalEScore) > 0.0001) {
+      return {
+        diff: b.totalEScore - a.totalEScore,
+        reason: `Desempate FIG: Mayor nota total de Ejecución E (${Math.max(a.totalEScore, b.totalEScore).toFixed(3)} vs ${Math.min(a.totalEScore, b.totalEScore).toFixed(3)})`,
+      }
+    }
+
+    // Step 5: Highest single apparatus Execution score
+    const aEVals = Object.values(a.apparatusEScores).sort((x, y) => y - x)
+    const bEVals = Object.values(b.apparatusEScores).sort((x, y) => y - x)
+    const aTopE = aEVals[0] ?? 0
+    const bTopE = bEVals[0] ?? 0
+    if (Math.abs(bTopE - aTopE) > 0.0001) {
+      return {
+        diff: bTopE - aTopE,
+        reason: `Desempate FIG: Mayor nota individual de Ejecución E (${Math.max(aTopE, bTopE).toFixed(3)} vs ${Math.min(aTopE, bTopE).toFixed(3)})`,
+      }
+    }
+
+    return { diff: 0, reason: 'Empate oficial compartido (Criterios FIG idénticos)' }
+  }
+
+  const entries = Array.from(gymnastMap.entries()).map(([gymnastId, data]) => ({
+    gymnastId,
+    ...data,
+  }))
+
+  // Sort using the deterministic FIG cascade
+  entries.sort((a, b) => compareAllAround(a, b).diff)
+
+  // Assign Olympic FIG shared ranks (e.g. 1st, 1st, 3rd)
+  const results: AllAroundStanding[] = []
+  let previousRank = 1
+
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i]
+    let rank = i + 1
+    let tieBreakInfo: string | undefined
+
+    if (i > 0) {
+      const prev = entries[i - 1]
+      const comparison = compareAllAround(entry, prev)
+
+      if (comparison.diff === 0) {
+        // Complete tie: share previous rank
+        rank = previousRank
+        tieBreakInfo = 'Empate compartido (Reglamento FIG Art. 5.3)'
+      } else {
+        // Tie was broken between them if totalScore was equal
+        if (Math.abs(entry.totalScore - prev.totalScore) < 0.0001) {
+          tieBreakInfo = comparison.reason
+        }
+        previousRank = rank
+      }
+    } else {
+      previousRank = 1
+    }
+
     let medal: AllAroundStanding['medal']
     if (rank === 1) medal = 'gold'
     else if (rank === 2) medal = 'silver'
     else if (rank === 3) medal = 'bronze'
 
-    return {
+    results.push({
       rank,
       gymnastId: entry.gymnastId,
       gymnastName: entry.gymnastName,
@@ -178,9 +273,12 @@ export function computeAllAroundStandings(
       apparatusScores: entry.apparatusScores,
       totalScore: entry.totalScore,
       totalEScore: entry.totalEScore,
+      tieBreakInfo,
       medal,
-    }
-  })
+    })
+  }
+
+  return results
 }
 
 /**
@@ -191,7 +289,12 @@ export function computeAllAroundStandings(
  * If a gymnast performs two vaults (attempt 1 and attempt 2), the final score
  * is the arithmetic average of both vaults: (V1 + V2) / 2.
  * Other apparatuses (UB, BB, FX) only use attempt 1.
- * Tiebreaker: Higher E-score average.
+ * 
+ * FIG Official Tiebreaker Cascade for Apparatus:
+ * 1. Higher E-score average (Ejecución).
+ * 2. Higher D-score (Dificultad).
+ * 3. In Vault (VT): Highest single vault final score.
+ * 4. Unbroken tie: Shared rank and medal.
  */
 export function computeApparatusStandings(
   scores: GymnastScoreEntry[],
@@ -308,27 +411,89 @@ export function computeApparatusStandings(
       }))
   }
 
-  const sorted = gymnastEntries.sort((a, b) => {
-    if (b.finalScore !== a.finalScore) {
-      return b.finalScore - a.finalScore
+  // Apparatus FIG Comparator
+  const compareApparatus = (
+    a: (typeof gymnastEntries)[0],
+    b: (typeof gymnastEntries)[0]
+  ): { diff: number; reason?: string } => {
+    // 0. Primary: Final Score
+    if (Math.abs(b.finalScore - a.finalScore) > 0.0001) {
+      return { diff: b.finalScore - a.finalScore }
     }
-    return b.eScoreAvg - a.eScoreAvg
-  })
 
-  return sorted.map((entry, index) => {
-    const rank = index + 1
+    // Step 1: Higher E-score average
+    if (Math.abs(b.eScoreAvg - a.eScoreAvg) > 0.0001) {
+      return {
+        diff: b.eScoreAvg - a.eScoreAvg,
+        reason: `Desempate FIG: Mayor nota de Ejecución E (${Math.max(a.eScoreAvg, b.eScoreAvg).toFixed(3)} vs ${Math.min(a.eScoreAvg, b.eScoreAvg).toFixed(3)})`,
+      }
+    }
+
+    // Step 2: Higher D-score
+    if (Math.abs(b.dScore - a.dScore) > 0.0001) {
+      return {
+        diff: b.dScore - a.dScore,
+        reason: `Desempate FIG: Mayor nota de Dificultad D (${Math.max(a.dScore, b.dScore).toFixed(3)} vs ${Math.min(a.dScore, b.dScore).toFixed(3)})`,
+      }
+    }
+
+    // Step 3 (Vault VT only): Highest single vault score
+    if (apparatusCode === 'VT' && a.vaultAttempts && b.vaultAttempts) {
+      const aBest = Math.max(a.vaultAttempts.attempt1?.finalScore ?? 0, a.vaultAttempts.attempt2?.finalScore ?? 0)
+      const bBest = Math.max(b.vaultAttempts.attempt1?.finalScore ?? 0, b.vaultAttempts.attempt2?.finalScore ?? 0)
+      if (Math.abs(bBest - aBest) > 0.0001) {
+        return {
+          diff: bBest - aBest,
+          reason: `Desempate FIG Salto: Mejor salto individual (${Math.max(aBest, bBest).toFixed(3)} vs ${Math.min(aBest, bBest).toFixed(3)})`,
+        }
+      }
+    }
+
+    return { diff: 0, reason: 'Empate oficial compartido (Criterios FIG idénticos)' }
+  }
+
+  gymnastEntries.sort((a, b) => compareApparatus(a, b).diff)
+
+  const results: ApparatusStanding[] = []
+  let previousRank = 1
+
+  for (let i = 0; i < gymnastEntries.length; i++) {
+    const entry = gymnastEntries[i]
+    let rank = i + 1
+    let tieBreakInfo: string | undefined
+
+    if (i > 0) {
+      const prev = gymnastEntries[i - 1]
+      const comparison = compareApparatus(entry, prev)
+
+      if (comparison.diff === 0) {
+        rank = previousRank
+        tieBreakInfo = 'Empate compartido (Reglamento FIG)'
+      } else {
+        if (Math.abs(entry.finalScore - prev.finalScore) < 0.0001) {
+          tieBreakInfo = comparison.reason
+        }
+        previousRank = rank
+      }
+    } else {
+      previousRank = 1
+    }
+
     let medal: ApparatusStanding['medal']
     if (rank === 1) medal = 'gold'
     else if (rank === 2) medal = 'silver'
     else if (rank === 3) medal = 'bronze'
 
-    return {
+    results.push({
       rank,
       apparatusCode,
       ...entry,
+      tieBreakInfo,
       medal,
-    }
-  })
+    })
+  }
+
+  return results
 }
 
 /**
@@ -397,20 +562,80 @@ export function computeTeamStandings(
     }
   })
 
-  // Sort descending by total score
-  standings.sort((a, b) => b.totalScore - a.totalScore)
+  // Team FIG Comparator
+  const compareTeams = (
+    a: (typeof standings)[0],
+    b: (typeof standings)[0]
+  ): { diff: number; reason?: string } => {
+    // 0. Primary: Total Score
+    if (Math.abs(b.totalScore - a.totalScore) > 0.0001) {
+      return { diff: b.totalScore - a.totalScore }
+    }
 
-  return standings.map((entry, index) => {
-    const rank = index + 1
+    // Step 1: Highest sum of the 3 highest apparatus totals
+    const aVals = Object.values(a.apparatusTotals).sort((x, y) => y - x)
+    const bVals = Object.values(b.apparatusTotals).sort((x, y) => y - x)
+    const aTop3 = Math.round(aVals.slice(0, 3).reduce((acc, curr) => acc + curr, 0) * 1000) / 1000
+    const bTop3 = Math.round(bVals.slice(0, 3).reduce((acc, curr) => acc + curr, 0) * 1000) / 1000
+    if (Math.abs(bTop3 - aTop3) > 0.0001) {
+      return {
+        diff: bTop3 - aTop3,
+        reason: `Desempate FIG Equipos: Suma 3 mejores aparatos (${Math.max(aTop3, bTop3).toFixed(3)} vs ${Math.min(aTop3, bTop3).toFixed(3)})`,
+      }
+    }
+
+    // Step 2: Highest single apparatus total
+    const aTop1 = aVals[0] ?? 0
+    const bTop1 = bVals[0] ?? 0
+    if (Math.abs(bTop1 - aTop1) > 0.0001) {
+      return {
+        diff: bTop1 - aTop1,
+        reason: `Desempate FIG Equipos: Mayor total en un solo aparato (${Math.max(aTop1, bTop1).toFixed(3)} vs ${Math.min(aTop1, bTop1).toFixed(3)})`,
+      }
+    }
+
+    return { diff: 0, reason: 'Empate de equipos compartido (Criterios FIG idénticos)' }
+  }
+
+  standings.sort((a, b) => compareTeams(a, b).diff)
+
+  const results: TeamStanding[] = []
+  let previousRank = 1
+
+  for (let i = 0; i < standings.length; i++) {
+    const entry = standings[i]
+    let rank = i + 1
+    let tieBreakInfo: string | undefined
+
+    if (i > 0) {
+      const prev = standings[i - 1]
+      const comparison = compareTeams(entry, prev)
+
+      if (comparison.diff === 0) {
+        rank = previousRank
+        tieBreakInfo = 'Empate de equipos compartido'
+      } else {
+        if (Math.abs(entry.totalScore - prev.totalScore) < 0.0001) {
+          tieBreakInfo = comparison.reason
+        }
+        previousRank = rank
+      }
+    } else {
+      previousRank = 1
+    }
+
     let trophy: TeamStanding['trophy']
     if (rank === 1) trophy = '1st'
     else if (rank === 2) trophy = '2nd'
     else if (rank === 3) trophy = '3rd'
 
-    return {
+    results.push({
       rank,
       ...entry,
+      tieBreakInfo,
       trophy,
-    }
-  })
+    })
+  }
+
+  return results
 }

@@ -418,7 +418,14 @@ export const LiveStandingsBoard: React.FC = () => {
                           {medalBadge(row.medal)}
                         </div>
                       </td>
-                      <td className="px-4 py-3 font-bold text-slate-900">{row.gymnastName}</td>
+                      <td className="px-4 py-3 font-bold text-slate-900">
+                        <div>{row.gymnastName}</div>
+                        {row.tieBreakInfo && (
+                          <div className="text-[10px] text-amber-700 font-sans font-normal">
+                            {row.tieBreakInfo}
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-slate-500">{row.clubName}</td>
                       <td className="px-4 py-3">
                         <span className="font-semibold text-slate-800">{row.categoryName || 'General'}</span>
@@ -460,7 +467,14 @@ export const LiveStandingsBoard: React.FC = () => {
                           {medalBadge(row.medal)}
                         </div>
                       </td>
-                      <td className="px-4 py-3 font-bold text-slate-900">{row.gymnastName}</td>
+                      <td className="px-4 py-3 font-bold text-slate-900">
+                        <div>{row.gymnastName}</div>
+                        {row.tieBreakInfo && (
+                          <div className="text-[10px] text-amber-700 font-sans font-normal">
+                            {row.tieBreakInfo}
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-slate-500">{row.clubName}</td>
                       <td className="px-4 py-3">
                         <span className="font-semibold text-slate-800">{row.categoryName || 'General'}</span>
@@ -505,7 +519,14 @@ export const LiveStandingsBoard: React.FC = () => {
                           <span>{team.rank}° Lugar</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 font-bold text-slate-900">{team.clubName}</td>
+                      <td className="px-4 py-3 font-bold text-slate-900">
+                        <div>{team.clubName}</div>
+                        {team.tieBreakInfo && (
+                          <div className="text-[10px] text-amber-700 font-sans font-normal">
+                            {team.tieBreakInfo}
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-center font-mono tabular-nums">{team.participatingGymnastsCount}</td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex justify-center gap-1 text-[10px] font-mono tabular-nums">
