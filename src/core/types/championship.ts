@@ -36,6 +36,12 @@ export interface Championship {
   status: ChampionshipStatus
   rulesetVersion: string          // e.g. "FIG_2025_2028_V1", "USAG_LEVELS_2024"
   scoringSchemaVersion: string    // Versioned scoring engine identifier
+  inviteCode?: string             // Código para que otros clubes se inscriban
+  judgeCode?: string              // Código PIN rápido para jurados
+  basesUrl?: string               // Enlace a bases técnicas PDF
+  contactEmail?: string
+  contactPhone?: string
+  entryFeeInfo?: string
   bannerUrl?: string
   createdAt: string
   updatedAt: string

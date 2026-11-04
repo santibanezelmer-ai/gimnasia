@@ -10,6 +10,7 @@ import { LiveStandingsBoard } from '@/features/standings/LiveStandingsBoard'
 import { HeadJudgeView } from '@/features/views/HeadJudgeView'
 import { ClubManagerView } from '@/features/views/ClubManagerView'
 import { SubscriptionPlansView } from '@/features/billing/SubscriptionPlansView'
+import { FastJudgeTerminal } from '@/features/scoring/FastJudgeTerminal'
 import { Badge } from '@/components/ui/badge'
 import {
   Trophy,
@@ -20,6 +21,7 @@ import {
   Flame,
   Zap,
   LayoutDashboard,
+  KeyRound,
 } from 'lucide-react'
 
 const DashboardContent: React.FC = () => {
@@ -28,6 +30,7 @@ const DashboardContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
     'overview' | 'championships' | 'delegations' | 'judging' | 'standings' | 'billing'
   >('overview')
+  const [authMode, setAuthMode] = useState<'login' | 'fast_judge' | 'live_standings'>('login')
 
   type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'outline'
 
@@ -108,7 +111,7 @@ const DashboardContent: React.FC = () => {
                 <span>Panel Principal</span>
               </button>
 
-              {(activeRole === 'org_admin' || profile?.platformRole === 'platform_admin') && (
+              {(activeRole === 'org_admin' || activeRole === 'club_manager' || profile?.platformRole === 'platform_admin') && (
                 <button
                   type="button"
                   onClick={() => setActiveTab('championships')}
@@ -119,7 +122,7 @@ const DashboardContent: React.FC = () => {
                   }`}
                 >
                   <Trophy className="h-4 w-4" />
-                  <span>Campeonatos</span>
+                  <span>{activeRole === 'club_manager' ? 'Organizar Torneos' : 'Campeonatos'}</span>
                 </button>
               )}
 
@@ -188,14 +191,51 @@ const DashboardContent: React.FC = () => {
       {/* Main Content Area */}
       <main className="mx-auto max-w-7xl px-6 py-8">
         {!user ? (
-          <div className="py-8">
+          <div className="py-4">
             <div className="max-w-md mx-auto mb-6 text-center">
-              <h2 className="text-2xl font-bold text-slate-900">Acceso a Operix Gymnastics</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Inicia sesión con tu rol (Administrador, Juez o Delegado de Club) para ver tu consola personalizada.
+              <h2 className="text-2xl font-bold text-slate-900">Operix Gymnastics</h2>
+              <p className="mt-1 text-xs text-slate-600">
+                Plataforma de campeonatos y puntuación FIG para clubes y federaciones.
               </p>
+
+              {/* Fast Switcher between Club Auth, Judge Fast PIN, and Live Results */}
+              <div className="mt-4 inline-flex rounded-xl border border-slate-200 bg-white p-1 text-xs shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => setAuthMode('login')}
+                  className={`rounded-lg px-3 py-1.5 font-semibold transition-colors flex items-center gap-1.5 ${
+                    authMode === 'login' ? 'bg-blue-700 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Building2 className="h-3.5 w-3.5" />
+                  Club / Federación
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuthMode('fast_judge')}
+                  className={`rounded-lg px-3 py-1.5 font-semibold transition-colors flex items-center gap-1.5 ${
+                    authMode === 'fast_judge' ? 'bg-indigo-700 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                  Acceso Juez (Con Código)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuthMode('live_standings')}
+                  className={`rounded-lg px-3 py-1.5 font-semibold transition-colors flex items-center gap-1.5 ${
+                    authMode === 'live_standings' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Flame className="h-3.5 w-3.5" />
+                  Resultados en Vivo
+                </button>
+              </div>
             </div>
-            <AuthForm />
+
+            {authMode === 'login' && <AuthForm />}
+            {authMode === 'fast_judge' && <FastJudgeTerminal />}
+            {authMode === 'live_standings' && <LiveStandingsBoard />}
           </div>
         ) : (
           <div className="space-y-8">
@@ -249,7 +289,7 @@ const DashboardContent: React.FC = () => {
 
                 {activeRole === 'club_manager' && (
                   <div className="space-y-8">
-                    <ClubManagerView />
+                    <ClubManagerView onCreateChampionship={() => setActiveTab('championships')} />
                     <LiveStandingsBoard />
                   </div>
                 )}
@@ -263,7 +303,13 @@ const DashboardContent: React.FC = () => {
             )}
 
             {activeTab === 'championships' && <ChampionshipsManager />}
-            {activeTab === 'delegations' && (activeRole === 'club_manager' ? <ClubManagerView /> : <DelegationsManager />)}
+            {activeTab === 'delegations' && (
+              activeRole === 'club_manager' ? (
+                <ClubManagerView onCreateChampionship={() => setActiveTab('championships')} />
+              ) : (
+                <DelegationsManager />
+              )
+            )}
             {activeTab === 'judging' && (
               <div className="space-y-8">
                 {activeRole === 'head_judge' && <HeadJudgeView />}

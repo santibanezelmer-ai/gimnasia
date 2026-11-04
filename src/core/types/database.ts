@@ -653,7 +653,49 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_championship_by_code: {
+        Args: {
+          p_code: string
+        }
+        Returns: {
+          championship: {
+            id: string
+            organization_id: string
+            name: string
+            slug: string
+            description?: string
+            start_date: string
+            end_date: string
+            location?: string
+            venue_name?: string
+            visibility: string
+            status: string
+            ruleset_version: string
+            invite_code?: string
+            judge_code?: string
+            bases_url?: string
+            entry_fee_info?: string
+          }
+          categories: Record<string, unknown>[]
+          apparatuses: Record<string, unknown>[]
+          registrations: Record<string, unknown>[]
+        }
+      }
+      submit_fast_judge_score: {
+        Args: {
+          p_championship_id: string
+          p_judge_code: string
+          p_registration_id: string
+          p_apparatus_id: string
+          p_judge_name: string
+          p_d_score: number
+          p_e_scores: number[]
+          p_e_score_avg: number
+          p_neutral_deductions: number
+          p_final_score: number
+        }
+        Returns: string
+      }
     }
     Enums: {
       platform_role: 'platform_admin' | 'platform_support' | 'none'

@@ -47,7 +47,11 @@ interface AvailableChampionshipOption {
   name: string
 }
 
-export const ClubManagerView: React.FC = () => {
+export interface ClubManagerViewProps {
+  onCreateChampionship?: () => void
+}
+
+export const ClubManagerView: React.FC<ClubManagerViewProps> = ({ onCreateChampionship }) => {
   const { activeOrganization } = useOrganization()
   const [registrations, setRegistrations] = useState<ClubRegistrationRow[]>([])
   const [clubName, setClubName] = useState<string>('Mi Club')
@@ -340,13 +344,42 @@ export const ClubManagerView: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsRegistering(true)}
-              className="flex items-center gap-1.5 rounded-lg bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-800"
+              className="flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-800"
             >
               <Plus className="h-3.5 w-3.5" />
               Inscribir Gimnasta
             </button>
           )}
         </div>
+      </div>
+
+      {/* Banner de Invitación a Organizar Torneo Propio */}
+      <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+              SaaS de Gimnasia para tu Club
+            </span>
+            <Badge variant="outline" className="text-[10px]">Cero Costo Inicial</Badge>
+          </div>
+          <h4 className="text-sm font-bold text-slate-900">
+            ¿Tu club quiere organizar su propio campeonato o copa interclubes?
+          </h4>
+          <p className="text-xs text-slate-600 mt-0.5">
+            Crea tu torneo, publica las bases técnicas, genera códigos PIN para jurados y abre inscripciones online para recibir a otros clubes invitados.
+          </p>
+        </div>
+
+        {onCreateChampionship && (
+          <button
+            type="button"
+            onClick={onCreateChampionship}
+            className="rounded-xl bg-blue-700 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-800 transition-colors shrink-0 flex items-center gap-2"
+          >
+            <Trophy className="h-4 w-4 text-amber-300" />
+            Crear mi propio Campeonato →
+          </button>
+        )}
       </div>
 
       {errorMsg && (
