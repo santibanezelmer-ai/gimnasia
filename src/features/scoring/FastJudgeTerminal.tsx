@@ -58,6 +58,7 @@ export const FastJudgeTerminal: React.FC = () => {
   const [selectedAppId, setSelectedAppId] = useState<string>('')
 
   // Scoring Fields
+  const [vaultAttempt, setVaultAttempt] = useState<1 | 2>(1)
   const [isObligatory, setIsObligatory] = useState<boolean>(false)
   const [fixedD, setFixedD] = useState<string>('10.0')
   const [dScore, setDScore] = useState<string>('4.8')
@@ -187,6 +188,9 @@ export const FastJudgeTerminal: React.FC = () => {
     setSubmitError(null)
     setSubmitSuccess(null)
 
+    const currentApp = apparatuses.find((a) => a.id === selectedAppId)
+    const isVaultApp = currentApp?.code === 'VT'
+
     try {
       const { error } = await supabase.rpc('submit_fast_judge_score', {
         p_championship_id: session.championshipId,
@@ -199,13 +203,20 @@ export const FastJudgeTerminal: React.FC = () => {
         p_e_score_avg: result.eScoreAverage,
         p_neutral_deductions: result.neutralDeductions,
         p_final_score: result.finalScore,
+        p_attempt_number: isVaultApp ? vaultAttempt : 1,
       })
 
       if (error) throw error
 
       setSubmitSuccess(
-        `¡Puntuación ${result.finalScore.toFixed(3)} enviada con éxito a Mesa de Control!`
+        isVaultApp
+          ? `¡Salto ${vaultAttempt} (${result.finalScore.toFixed(3)}) enviado con éxito!`
+          : `¡Puntuación ${result.finalScore.toFixed(3)} enviada con éxito a Mesa de Control!`
       )
+
+      if (isVaultApp && vaultAttempt === 1) {
+        setVaultAttempt(2)
+      }
     } catch (err: unknown) {
       setSubmitError((err as Error).message)
     } finally {
@@ -378,6 +389,32 @@ export const FastJudgeTerminal: React.FC = () => {
                 </button>
               ))}
             </div>
+
+            {apparatuses.find((a) => a.id === selectedAppId)?.code === 'VT' && (
+              <div className="mt-2.5 flex items-center justify-between rounded-lg bg-indigo-100/60 p-2 text-xs border border-indigo-200">
+                <span className="font-bold text-indigo-900 text-[11px]">Intento de Salto:</span>
+                <div className="inline-flex rounded-md border border-indigo-300 bg-white p-0.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setVaultAttempt(1)}
+                    className={`rounded px-2.5 py-1 font-semibold transition-colors ${
+                      vaultAttempt === 1 ? 'bg-indigo-700 text-white' : 'text-indigo-900 hover:bg-indigo-50'
+                    }`}
+                  >
+                    Salto 1 (VT1)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVaultAttempt(2)}
+                    className={`rounded px-2.5 py-1 font-semibold transition-colors ${
+                      vaultAttempt === 2 ? 'bg-indigo-700 text-white' : 'text-indigo-900 hover:bg-indigo-50'
+                    }`}
+                  >
+                    Salto 2 (VT2)
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

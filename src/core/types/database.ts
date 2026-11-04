@@ -135,6 +135,12 @@ export interface Database {
           ruleset_version: string
           scoring_schema_version: string
           banner_url: string | null
+          invite_code: string | null
+          judge_code: string | null
+          bases_url: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          entry_fee_info: string | null
           created_at: string
           updated_at: string
         }
@@ -153,6 +159,12 @@ export interface Database {
           ruleset_version?: string
           scoring_schema_version?: string
           banner_url?: string | null
+          invite_code?: string | null
+          judge_code?: string | null
+          bases_url?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          entry_fee_info?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -171,6 +183,12 @@ export interface Database {
           ruleset_version?: string
           scoring_schema_version?: string
           banner_url?: string | null
+          invite_code?: string | null
+          judge_code?: string | null
+          bases_url?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          entry_fee_info?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -693,6 +711,7 @@ export interface Database {
           p_e_score_avg: number
           p_neutral_deductions: number
           p_final_score: number
+          p_attempt_number?: number
         }
         Returns: string
       }

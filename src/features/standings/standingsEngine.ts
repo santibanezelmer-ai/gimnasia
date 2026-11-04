@@ -17,6 +17,7 @@ export interface GymnastScoreEntry {
   categoryName?: string
   scoringRegime?: 'free' | 'obligatory'
   apparatusCode: string
+  attemptNumber?: number
   dScore: number
   eScoreAvg: number
   finalScore: number
@@ -49,6 +50,10 @@ export interface ApparatusStanding {
   dScore: number
   eScoreAvg: number
   finalScore: number
+  vaultAttempts?: {
+    attempt1?: { dScore: number; eScoreAvg: number; finalScore: number }
+    attempt2?: { dScore: number; eScoreAvg: number; finalScore: number }
+  }
   medal?: 'gold' | 'silver' | 'bronze'
 }
 
@@ -65,7 +70,11 @@ export interface TeamStanding {
 /**
  * Computes All-Around Individual Standings from approved/provisional scores.
  * Can be filtered by categoryId to prevent mixing Olympic/Free and Obligatory regimes.
- * Tiebreaker: Higher total E-score sum.
+ * 
+ * FIG Official Rule: For All-Around, only Vault 1 (attempt 1) counts.
+ * Tiebreaker:
+ * 1. Sum of 3 highest apparatus scores (in GAF).
+ * 2. Higher total E-score sum.
  */
 export function computeAllAroundStandings(
   scores: GymnastScoreEntry[],
@@ -98,6 +107,12 @@ export function computeAllAroundStandings(
   >()
 
   for (const s of validScores) {
+    const attempt = s.attemptNumber ?? 1
+    // FIG Rule: Only attempt 1 counts for All-Around (skip second vault)
+    if (attempt !== 1) {
+      continue
+    }
+
     if (!gymnastMap.has(s.gymnastId)) {
       gymnastMap.set(s.gymnastId, {
         gymnastName: s.gymnastName,
@@ -112,12 +127,17 @@ export function computeAllAroundStandings(
     }
 
     const current = gymnastMap.get(s.gymnastId)!
-    current.apparatusScores[s.apparatusCode] = s.finalScore
-    current.totalScore = Math.round((current.totalScore + s.finalScore) * 1000) / 1000
-    current.totalEScore = Math.round((current.totalEScore + s.eScoreAvg) * 1000) / 1000
+    // Prevent duplicate attempt 1 records if any
+    if (current.apparatusScores[s.apparatusCode] === undefined) {
+      current.apparatusScores[s.apparatusCode] = s.finalScore
+      current.totalScore = Math.round((current.totalScore + s.finalScore) * 1000) / 1000
+      current.totalEScore = Math.round((current.totalEScore + s.eScoreAvg) * 1000) / 1000
+    }
   }
 
-  // Sort descending by total score, then tiebreak by total E-score
+  // Sort descending by total score, then tiebreak by FIG Technical Regulations:
+  // 1. Highest sum of top 3 apparatus scores
+  // 2. Highest total E-score
   const sorted = Array.from(gymnastMap.entries())
     .map(([gymnastId, data]) => ({
       gymnastId,
@@ -127,6 +147,16 @@ export function computeAllAroundStandings(
       if (b.totalScore !== a.totalScore) {
         return b.totalScore - a.totalScore
       }
+
+      // FIG Art. 5.3: Top 3 apparatus scores sum
+      const aVals = Object.values(a.apparatusScores).sort((x, y) => y - x)
+      const bVals = Object.values(b.apparatusScores).sort((x, y) => y - x)
+      const aTop3 = Math.round(aVals.slice(0, 3).reduce((acc, curr) => acc + curr, 0) * 1000) / 1000
+      const bTop3 = Math.round(bVals.slice(0, 3).reduce((acc, curr) => acc + curr, 0) * 1000) / 1000
+      if (bTop3 !== aTop3) {
+        return bTop3 - aTop3
+      }
+
       return b.totalEScore - a.totalEScore
     })
 
@@ -156,6 +186,11 @@ export function computeAllAroundStandings(
 /**
  * Computes Apparatus Standings for a single apparatus.
  * Can be filtered by categoryId.
+ * 
+ * FIG Rule for Vault (VT) Event Finals:
+ * If a gymnast performs two vaults (attempt 1 and attempt 2), the final score
+ * is the arithmetic average of both vaults: (V1 + V2) / 2.
+ * Other apparatuses (UB, BB, FX) only use attempt 1.
  * Tiebreaker: Higher E-score average.
  */
 export function computeApparatusStandings(
@@ -170,7 +205,110 @@ export function computeApparatusStandings(
       (!categoryId || s.categoryId === categoryId)
   )
 
-  const sorted = [...filtered].sort((a, b) => {
+  let gymnastEntries: {
+    gymnastId: string
+    gymnastName: string
+    clubId: string
+    clubName: string
+    categoryId?: string
+    categoryName?: string
+    dScore: number
+    eScoreAvg: number
+    finalScore: number
+    vaultAttempts?: {
+      attempt1?: { dScore: number; eScoreAvg: number; finalScore: number }
+      attempt2?: { dScore: number; eScoreAvg: number; finalScore: number }
+    }
+  }[] = []
+
+  if (apparatusCode === 'VT') {
+    // Group by gymnastId to handle 2 vault attempts for event finals
+    const gymnastVaultMap = new Map<
+      string,
+      {
+        gymnastName: string
+        clubId: string
+        clubName: string
+        categoryId?: string
+        categoryName?: string
+        attempt1?: GymnastScoreEntry
+        attempt2?: GymnastScoreEntry
+      }
+    >()
+
+    for (const s of filtered) {
+      if (!gymnastVaultMap.has(s.gymnastId)) {
+        gymnastVaultMap.set(s.gymnastId, {
+          gymnastName: s.gymnastName,
+          clubId: s.clubId,
+          clubName: s.clubName,
+          categoryId: s.categoryId,
+          categoryName: s.categoryName,
+        })
+      }
+      const g = gymnastVaultMap.get(s.gymnastId)!
+      const att = s.attemptNumber ?? 1
+      if (att === 2) {
+        g.attempt2 = s
+      } else {
+        g.attempt1 = s
+      }
+    }
+
+    gymnastEntries = Array.from(gymnastVaultMap.entries()).map(([gymnastId, g]) => {
+      let finalScore = 0
+      let dScore = 0
+      let eScoreAvg = 0
+
+      if (g.attempt1 && g.attempt2) {
+        // FIG Rule: Event Finals Vault score = arithmetic mean of Vault 1 and Vault 2
+        finalScore = Math.round(((g.attempt1.finalScore + g.attempt2.finalScore) / 2) * 1000) / 1000
+        dScore = Math.round(((g.attempt1.dScore + g.attempt2.dScore) / 2) * 1000) / 1000
+        eScoreAvg = Math.round(((g.attempt1.eScoreAvg + g.attempt2.eScoreAvg) / 2) * 1000) / 1000
+      } else if (g.attempt1) {
+        finalScore = g.attempt1.finalScore
+        dScore = g.attempt1.dScore
+        eScoreAvg = g.attempt1.eScoreAvg
+      } else if (g.attempt2) {
+        finalScore = g.attempt2.finalScore
+        dScore = g.attempt2.dScore
+        eScoreAvg = g.attempt2.eScoreAvg
+      }
+
+      return {
+        gymnastId,
+        gymnastName: g.gymnastName,
+        clubId: g.clubId,
+        clubName: g.clubName,
+        categoryId: g.categoryId,
+        categoryName: g.categoryName,
+        dScore,
+        eScoreAvg,
+        finalScore,
+        vaultAttempts: {
+          attempt1: g.attempt1 ? { dScore: g.attempt1.dScore, eScoreAvg: g.attempt1.eScoreAvg, finalScore: g.attempt1.finalScore } : undefined,
+          attempt2: g.attempt2 ? { dScore: g.attempt2.dScore, eScoreAvg: g.attempt2.eScoreAvg, finalScore: g.attempt2.finalScore } : undefined,
+        },
+      }
+    })
+  } else {
+    // For other apparatuses (UB, BB, FX), only attempt 1 is used
+    gymnastEntries = filtered
+      .filter((s) => (s.attemptNumber ?? 1) === 1)
+      .map((entry) => ({
+        gymnastId: entry.gymnastId,
+        gymnastName: entry.gymnastName,
+        clubId: entry.clubId,
+        clubName: entry.clubName,
+        categoryId: entry.categoryId,
+        categoryName: entry.categoryName,
+        dScore: entry.dScore,
+        eScoreAvg: entry.eScoreAvg,
+        finalScore: entry.finalScore,
+      }))
+  }
+
+  const sorted = gymnastEntries.sort((a, b) => {
     if (b.finalScore !== a.finalScore) {
       return b.finalScore - a.finalScore
     }
@@ -186,16 +324,8 @@ export function computeApparatusStandings(
 
     return {
       rank,
-      apparatusCode: entry.apparatusCode,
-      gymnastId: entry.gymnastId,
-      gymnastName: entry.gymnastName,
-      clubId: entry.clubId,
-      clubName: entry.clubName,
-      categoryId: entry.categoryId,
-      categoryName: entry.categoryName,
-      dScore: entry.dScore,
-      eScoreAvg: entry.eScoreAvg,
-      finalScore: entry.finalScore,
+      apparatusCode,
+      ...entry,
       medal,
     }
   })
@@ -204,13 +334,17 @@ export function computeApparatusStandings(
 /**
  * Computes Team Standings (Top N scores per apparatus for each club).
  * Default: 3 best scores per apparatus.
+ * FIG Rule: Only attempt 1 of Vault counts for Team Total.
  */
 export function computeTeamStandings(
   scores: GymnastScoreEntry[],
   topNScoresPerApparatus = 3
 ): TeamStanding[] {
   const valid = scores.filter(
-    (s) => s.status === 'official_approved' || s.status === 'provisional'
+    (s) =>
+      (s.status === 'official_approved' || s.status === 'provisional') &&
+      // Only attempt 1 counts for team totals
+      (s.attemptNumber ?? 1) === 1
   )
 
   // Group by club -> apparatus -> array of scores

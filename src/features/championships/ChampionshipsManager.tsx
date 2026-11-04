@@ -23,6 +23,12 @@ import {
   Layers,
   X,
   CheckCircle2,
+  KeyRound,
+  FileText,
+  Copy,
+  Edit3,
+  ExternalLink,
+  Users,
 } from 'lucide-react'
 
 export const ChampionshipsManager: React.FC = () => {
@@ -41,6 +47,25 @@ export const ChampionshipsManager: React.FC = () => {
   const [venueName, setVenueName] = useState('')
   const [visibility, setVisibility] = useState<ChampionshipVisibility>('public')
   const [rulesetVersion, setRulesetVersion] = useState('FIG_2025_2028_V1')
+  const [inviteCode, setInviteCode] = useState('')
+  const [judgeCode, setJudgeCode] = useState('')
+  const [basesUrl, setBasesUrl] = useState('')
+
+  // Edit Championship Modal State
+  const [editingChamp, setEditingChamp] = useState<Championship | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editStartDate, setEditStartDate] = useState('')
+  const [editEndDate, setEditEndDate] = useState('')
+  const [editLocation, setEditLocation] = useState('')
+  const [editVenueName, setEditVenueName] = useState('')
+  const [editVisibility, setEditVisibility] = useState<ChampionshipVisibility>('public')
+  const [editRulesetVersion, setEditRulesetVersion] = useState('FIG_2025_2028_V1')
+  const [editInviteCode, setEditInviteCode] = useState('')
+  const [editJudgeCode, setEditJudgeCode] = useState('')
+  const [editBasesUrl, setEditBasesUrl] = useState('')
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
+  const [copiedCode, setCopiedCode] = useState<string | null>(null)
 
   // Category Configuration Panel State
   const [selectedChampForCategories, setSelectedChampForCategories] = useState<Championship | null>(null)
@@ -57,7 +82,16 @@ export const ChampionshipsManager: React.FC = () => {
   const [catRegime, setCatRegime] = useState<CategoryScoringRegime>('free')
   const [catFixedD, setCatFixedD] = useState('10.0')
 
-  const canManage = activeRole === 'org_admin' || activeRole === 'competition_manager'
+  const canManage =
+    activeRole === 'org_admin' ||
+    activeRole === 'competition_manager' ||
+    activeRole === 'club_manager'
+
+  const handleCopy = (text: string, label: string) => {
+    navigator.clipboard.writeText(text)
+    setCopiedCode(label)
+    setTimeout(() => setCopiedCode(null), 2500)
+  }
 
   const loadChampionships = useCallback(async () => {
     if (!activeOrganization) {
@@ -92,6 +126,12 @@ export const ChampionshipsManager: React.FC = () => {
           status: row.status,
           rulesetVersion: row.ruleset_version,
           scoringSchemaVersion: row.scoring_schema_version,
+          inviteCode: row.invite_code ?? undefined,
+          judgeCode: row.judge_code ?? undefined,
+          basesUrl: row.bases_url ?? undefined,
+          contactEmail: row.contact_email ?? undefined,
+          contactPhone: row.contact_phone ?? undefined,
+          entryFeeInfo: row.entry_fee_info ?? undefined,
           bannerUrl: row.banner_url ?? undefined,
           createdAt: row.created_at,
           updatedAt: row.updated_at,
@@ -114,21 +154,33 @@ export const ChampionshipsManager: React.FC = () => {
 
     try {
       setErrorMsg(null)
+      const cleanSlug = slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-')
+      const cleanInvite = inviteCode.trim().toUpperCase() || `${cleanSlug.substring(0, 6).toUpperCase()}-${Math.floor(Math.random() * 9000 + 1000)}`
+      const cleanJudge = judgeCode.trim().toUpperCase() || `JUEZ-${Math.floor(Math.random() * 9000 + 1000)}`
+
       const { error } = await supabase.from('championships').insert({
         organization_id: activeOrganization.id,
-        name,
-        slug,
+        name: name.trim(),
+        slug: cleanSlug,
         start_date: startDate,
         end_date: endDate,
-        location: location || null,
-        venue_name: venueName || null,
+        location: location.trim() || null,
+        venue_name: venueName.trim() || null,
         visibility,
         status: 'draft',
         ruleset_version: rulesetVersion,
         scoring_schema_version: 'FIG_STANDARD_V1',
+        invite_code: cleanInvite,
+        judge_code: cleanJudge,
+        bases_url: basesUrl.trim() || null,
       })
 
-      if (error) throw error
+      if (error) {
+        if (error.code === '23505' || error.message.includes('unique') || error.message.includes('invite_code')) {
+          throw new Error(`El código de invitación "${cleanInvite}" ya existe en otro campeonato. Por favor ingresa uno diferente.`)
+        }
+        throw error
+      }
 
       setIsCreating(false)
       setName('')
@@ -137,9 +189,77 @@ export const ChampionshipsManager: React.FC = () => {
       setEndDate('')
       setLocation('')
       setVenueName('')
+      setInviteCode('')
+      setJudgeCode('')
+      setBasesUrl('')
       await loadChampionships()
     } catch (err: unknown) {
       setErrorMsg((err as Error).message)
+    }
+  }
+
+  const handleOpenEdit = (champ: Championship) => {
+    setEditingChamp(champ)
+    setEditName(champ.name)
+    setEditStartDate(champ.startDate)
+    setEditEndDate(champ.endDate)
+    setEditLocation(champ.location || '')
+    setEditVenueName(champ.venueName || '')
+    setEditVisibility(champ.visibility)
+    setEditRulesetVersion(champ.rulesetVersion)
+    setEditInviteCode(champ.inviteCode || '')
+    setEditJudgeCode(champ.judgeCode || '')
+    setEditBasesUrl(champ.basesUrl || '')
+    setEditError(null)
+  }
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingChamp) return
+    setIsSavingEdit(true)
+    setEditError(null)
+
+    try {
+      const cleanInvite = editInviteCode.trim().toUpperCase()
+      const cleanJudge = editJudgeCode.trim().toUpperCase()
+
+      if (!cleanInvite) {
+        throw new Error('El código de invitación para clubes no puede estar vacío.')
+      }
+      if (!cleanJudge) {
+        throw new Error('El código de acceso para jueces no puede estar vacío.')
+      }
+
+      const { error } = await supabase
+        .from('championships')
+        .update({
+          name: editName.trim(),
+          start_date: editStartDate,
+          end_date: editEndDate,
+          location: editLocation.trim() || null,
+          venue_name: editVenueName.trim() || null,
+          visibility: editVisibility,
+          ruleset_version: editRulesetVersion,
+          invite_code: cleanInvite,
+          judge_code: cleanJudge,
+          bases_url: editBasesUrl.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', editingChamp.id)
+
+      if (error) {
+        if (error.code === '23505' || error.message.includes('unique') || error.message.includes('invite_code')) {
+          throw new Error(`El código de invitación "${cleanInvite}" ya existe en otro campeonato. Por favor ingresa uno diferente.`)
+        }
+        throw error
+      }
+
+      setEditingChamp(null)
+      await loadChampionships()
+    } catch (err: unknown) {
+      setEditError((err as Error).message)
+    } finally {
+      setIsSavingEdit(false)
     }
   }
 
@@ -360,6 +480,45 @@ export const ChampionshipsManager: React.FC = () => {
                   <option value="ESCOLAR_FORMATIVO_V1">Reglamento Escolar / Promocional</option>
                 </select>
               </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Código de Invitación (Para Clubes)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej. COPA-GAF-2026 (Auto si queda vacío)"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-mono uppercase focus:border-blue-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Código PIN de Jueces (Acceso Rápido)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej. JUEZ-2026 (Auto si queda vacío)"
+                  value={judgeCode}
+                  onChange={(e) => setJudgeCode(e.target.value.toUpperCase())}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-mono uppercase focus:border-blue-600 focus:outline-none"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  URL de Bases Técnicas (PDF / Documento)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://ejemplo.com/bases-torneo-2026.pdf"
+                  value={basesUrl}
+                  onChange={(e) => setBasesUrl(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:border-blue-600 focus:outline-none"
+                />
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
@@ -422,23 +581,262 @@ export const ChampionshipsManager: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Codes & Bases Panel */}
+                <div className="mt-3.5 p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-slate-700">
+                      <Users className="h-3.5 w-3.5 text-blue-600" />
+                      <span className="font-semibold text-[11px]">Código Invitación Clubes:</span>
+                      <span className="font-mono font-bold text-blue-900 bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                        {champ.inviteCode || 'N/A'}
+                      </span>
+                    </div>
+                    {champ.inviteCode && (
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(champ.inviteCode!, `invite-${champ.id}`)}
+                        className="text-[10px] font-semibold text-blue-700 hover:underline flex items-center gap-1"
+                      >
+                        <Copy className="h-3 w-3" />
+                        {copiedCode === `invite-${champ.id}` ? 'Copiado' : 'Copiar'}
+                      </button>
+                    )}
+                  </div>
+
+                  {canManage && (
+                    <div className="flex items-center justify-between border-t border-slate-200/60 pt-1.5">
+                      <div className="flex items-center gap-1.5 text-indigo-950">
+                        <KeyRound className="h-3.5 w-3.5 text-indigo-600" />
+                        <span className="font-semibold text-[11px]">PIN Jueces de Pista:</span>
+                        <span className="font-mono font-bold text-indigo-900 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">
+                          {champ.judgeCode || 'N/A'}
+                        </span>
+                      </div>
+                      {champ.judgeCode && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(champ.judgeCode!, `judge-${champ.id}`)}
+                          className="text-[10px] font-semibold text-indigo-700 hover:underline flex items-center gap-1"
+                        >
+                          <Copy className="h-3 w-3" />
+                          {copiedCode === `judge-${champ.id}` ? 'Copiado' : 'Copiar'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {champ.basesUrl && (
+                    <div className="flex items-center gap-1.5 text-slate-600 border-t border-slate-200/60 pt-1.5 text-[11px]">
+                      <FileText className="h-3 w-3 text-slate-400" />
+                      <a
+                        href={champ.basesUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-700 hover:underline flex items-center gap-1 font-medium"
+                      >
+                        <span>Ver Bases Técnicas (PDF)</span>
+                        <ExternalLink className="h-2.5 w-2.5" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+
                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-[11px] text-slate-400 uppercase font-semibold flex items-center gap-1">
-                    <Eye className="h-3 w-3" /> {champ.visibility}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[11px] text-slate-400 uppercase font-semibold flex items-center gap-1">
+                      <Eye className="h-3 w-3" /> {champ.visibility}
+                    </span>
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(champ)}
+                        className="font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1 hover:underline"
+                      >
+                        <Edit3 className="h-3 w-3 text-slate-500" />
+                        Editar Códigos & Torneo
+                      </button>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={() => handleOpenCategories(champ)}
                     className="font-semibold text-blue-700 hover:text-blue-800 hover:underline flex items-center gap-1"
                   >
                     <Layers className="h-3.5 w-3.5" />
-                    Configurar Categorías & Jurado →
+                    Categorías & Jurado →
                   </button>
                 </div>
               </Card>
             )
           })}
         </div>
+      )}
+
+      {/* MODAL / FORMULARIO DE EDICIÓN DE CAMPEONATO Y CÓDIGOS */}
+      {editingChamp && (
+        <Card className="border-blue-200 bg-blue-50/20 shadow-md p-6">
+          <div className="flex items-start justify-between border-b border-blue-100 pb-3 mb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-blue-700">Edición de Campeonato</span>
+                <Badge variant="outline">{editingChamp.slug}</Badge>
+              </div>
+              <h4 className="text-base font-bold text-slate-900 mt-0.5">
+                Editar Datos, Códigos & Bases: {editingChamp.name}
+              </h4>
+              <p className="text-xs text-slate-500">
+                Administra los códigos de acceso para clubes invitados y jueces, y actualiza los detalles del torneo.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setEditingChamp(null)}
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {editError && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg bg-rose-50 p-3 text-xs text-rose-700 border border-rose-200">
+              <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+              <span>{editError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSaveEdit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Nombre del Campeonato</label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:border-blue-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Visibilidad</label>
+                <select
+                  value={editVisibility}
+                  onChange={(e) => setEditVisibility(e.target.value as ChampionshipVisibility)}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:border-blue-600 focus:outline-none"
+                >
+                  <option value="public">Público (Visible en portal)</option>
+                  <option value="private">Privado (Solo organizador)</option>
+                  <option value="invitational">Por Invitación (Solo clubes con código)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Fecha de Inicio</label>
+                <input
+                  type="date"
+                  required
+                  value={editStartDate}
+                  onChange={(e) => setEditStartDate(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:border-blue-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Fecha de Término</label>
+                <input
+                  type="date"
+                  required
+                  min={editStartDate}
+                  value={editEndDate}
+                  onChange={(e) => setEditEndDate(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:border-blue-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Ciudad / Ubicación</label>
+                <input
+                  type="text"
+                  value={editLocation}
+                  onChange={(e) => setEditLocation(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:border-blue-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Recinto / Polideportivo</label>
+                <input
+                  type="text"
+                  value={editVenueName}
+                  onChange={(e) => setEditVenueName(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:border-blue-600 focus:outline-none"
+                />
+              </div>
+
+              <div className="rounded-lg bg-blue-50/60 p-3 border border-blue-200 space-y-1">
+                <label className="block text-xs font-bold text-blue-900 mb-1">
+                  Código de Invitación (Para Inscripción de Clubes)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editInviteCode}
+                  onChange={(e) => setEditInviteCode(e.target.value.toUpperCase())}
+                  className="w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-xs font-mono font-bold uppercase text-blue-900 focus:border-blue-600 focus:outline-none"
+                />
+                <p className="text-[10px] text-slate-500">
+                  Código único que los delegados de otros clubes ingresan para autoinscribir su plantel.
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-indigo-50/60 p-3 border border-indigo-200 space-y-1">
+                <label className="block text-xs font-bold text-indigo-950 mb-1">
+                  Código PIN de Jueces (Fast Judge Terminal)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editJudgeCode}
+                  onChange={(e) => setEditJudgeCode(e.target.value.toUpperCase())}
+                  className="w-full rounded-lg border border-indigo-300 bg-white px-3 py-2 text-xs font-mono font-bold uppercase text-indigo-900 focus:border-indigo-600 focus:outline-none"
+                />
+                <p className="text-[10px] text-slate-500">
+                  PIN de acceso rápido para jurados de pista. No lo compartas con el público general.
+                </p>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  URL de Bases Técnicas (PDF / Reglamento Específico)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://ejemplo.com/bases.pdf"
+                  value={editBasesUrl}
+                  onChange={(e) => setEditBasesUrl(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:border-blue-600 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-blue-100">
+              <button
+                type="button"
+                onClick={() => setEditingChamp(null)}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={isSavingEdit}
+                className="rounded-lg bg-blue-700 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
+              >
+                {isSavingEdit ? 'Guardando Cambios...' : 'Actualizar Campeonato & Códigos'}
+              </button>
+            </div>
+          </form>
+        </Card>
       )}
 
       {/* MODAL / PANEL DE CONFIGURACIÓN TÉCNICA DE CATEGORÍAS */}

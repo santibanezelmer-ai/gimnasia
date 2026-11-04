@@ -32,6 +32,7 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({ onScoreSaved }) => {
   const [selectedAppId, setSelectedAppId] = useState<string>('')
 
   // Scoring fields
+  const [vaultAttempt, setVaultAttempt] = useState<1 | 2>(1)
   const [isObligatory, setIsObligatory] = useState<boolean>(false)
   const [fixedD, setFixedD] = useState<string>('10.0')
   const [dScore, setDScore] = useState<string>('4.8')
@@ -155,12 +156,14 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({ onScoreSaved }) => {
         throw new Error('Inscripción no encontrada.')
       }
 
+      const isVaultApp = apparatuses.find((a) => a.id === selectedAppId)?.code === 'VT'
+
       const { error } = await supabase.from('scores').upsert(
         {
           championship_id: selectedReg.championshipId,
           registration_id: selectedReg.registrationId,
           apparatus_id: selectedAppId,
-          attempt_number: 1,
+          attempt_number: isVaultApp ? vaultAttempt : 1,
           d_score: result.dScore,
           e_scores: result.eScoresRaw,
           e_score_avg: result.eScoreAverage,
@@ -269,6 +272,32 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({ onScoreSaved }) => {
               </button>
             ))}
           </div>
+
+          {apparatuses.find((a) => a.id === selectedAppId)?.code === 'VT' && (
+            <div className="mt-2.5 flex items-center justify-between rounded-lg bg-blue-50/80 p-2 text-xs border border-blue-200">
+              <span className="font-bold text-blue-900 text-[11px]">Intento de Salto:</span>
+              <div className="inline-flex rounded-md border border-blue-300 bg-white p-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setVaultAttempt(1)}
+                  className={`rounded px-2.5 py-1 font-semibold transition-colors ${
+                    vaultAttempt === 1 ? 'bg-blue-700 text-white' : 'text-blue-900 hover:bg-blue-50'
+                  }`}
+                >
+                  Salto 1 (VT1)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVaultAttempt(2)}
+                  className={`rounded px-2.5 py-1 font-semibold transition-colors ${
+                    vaultAttempt === 2 ? 'bg-blue-700 text-white' : 'text-blue-900 hover:bg-blue-50'
+                  }`}
+                >
+                  Salto 2 (VT2)
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

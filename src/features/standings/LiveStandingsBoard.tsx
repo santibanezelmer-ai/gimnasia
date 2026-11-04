@@ -27,6 +27,7 @@ export const LiveStandingsBoard: React.FC = () => {
           d_score,
           e_score_avg,
           status,
+          attempt_number,
           apparatuses (
             code
           ),
@@ -83,6 +84,7 @@ export const LiveStandingsBoard: React.FC = () => {
             categoryName: cat?.name || 'General',
             scoringRegime: isOblig ? 'obligatory' : 'free',
             apparatusCode: app?.code || 'VT',
+            attemptNumber: row.attempt_number ? Number(row.attempt_number) : 1,
             dScore: Number(row.d_score),
             eScoreAvg: Number(row.e_score_avg),
             finalScore: Number(row.final_score),
@@ -329,7 +331,12 @@ export const LiveStandingsBoard: React.FC = () => {
                     {row.eScoreAvg.toFixed(3)}
                   </td>
                   <td className="px-4 py-3 text-right font-mono font-black text-blue-900 text-sm">
-                    {row.finalScore.toFixed(3)}
+                    <div>{row.finalScore.toFixed(3)}</div>
+                    {row.vaultAttempts?.attempt1 && row.vaultAttempts?.attempt2 && (
+                      <div className="text-[10px] font-normal text-slate-400 font-sans">
+                        S1: {row.vaultAttempts.attempt1.finalScore.toFixed(3)} | S2: {row.vaultAttempts.attempt2.finalScore.toFixed(3)}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
