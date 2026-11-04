@@ -1,40 +1,316 @@
-import React from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { supabase } from '@/lib/supabase/client'
+import { useOrganization } from '@/features/organizations/OrganizationContext'
+import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Users } from 'lucide-react'
+import {
+  Users,
+  Plus,
+  RefreshCw,
+  AlertCircle,
+  CheckCircle2,
+  Trophy,
+} from 'lucide-react'
+
+export interface ClubRegistrationRow {
+  id: string
+  championshipId: string
+  championshipName: string
+  gymnastId: string
+  gymnastName: string
+  rutOrId?: string
+  licenseNumber?: string
+  categoryName: string
+  scoringRegime: 'free' | 'obligatory'
+  rotationGroup?: string
+  bibNumber?: number
+  status: 'pending_approval' | 'approved' | 'rejected' | 'withdrawn'
+  scoresByApparatus: Record<string, number>
+  totalScore: number
+}
+
+interface AvailableGymnastOption {
+  id: string
+  name: string
+  licenseNumber?: string
+}
+
+interface AvailableCategoryOption {
+  id: string
+  name: string
+  championshipId: string
+  scoringRegime: 'free' | 'obligatory'
+}
+
+interface AvailableChampionshipOption {
+  id: string
+  name: string
+}
 
 export const ClubManagerView: React.FC = () => {
-  const myClubRegistrations = [
-    {
-      id: 'reg-1',
-      gymnast: 'Camila Valenzuela',
-      rut: '21.458.120-K',
-      license: 'FED-GAF-2026-089',
-      category: 'Nivel 5 GAF (Mayor)',
-      rotation: 'Subdivisión 2 • Rotación B',
-      status: 'approved' as const,
-      scores: { VT: 13.6, UB: 13.6, BB: 13.0, FX: 13.4, total: 53.6 },
-    },
-    {
-      id: 'reg-2',
-      gymnast: 'Martina Rojas',
-      rut: '22.301.890-4',
-      license: 'FED-GAF-2026-144',
-      category: 'Nivel 4 GAF (Juvenil)',
-      rotation: 'Subdivisión 1 • Rotación A',
-      status: 'approved' as const,
-      scores: { VT: 13.1, UB: 12.8, BB: 12.9, FX: 13.0, total: 51.8 },
-    },
-    {
-      id: 'reg-3',
-      gymnast: 'Pascuala Díaz',
-      rut: '23.114.778-9',
-      license: 'FED-GAF-2026-210',
-      category: 'Nivel 3 GAF (Infantil B)',
-      rotation: 'Pendiente sorteo',
-      status: 'pending_approval' as const,
-      scores: null,
-    },
-  ]
+  const { activeOrganization } = useOrganization()
+  const [registrations, setRegistrations] = useState<ClubRegistrationRow[]>([])
+  const [clubName, setClubName] = useState<string>('Mi Club')
+  const [clubId, setClubId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
+
+  // Registration modal / form state
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [availableGymnasts, setAvailableGymnasts] = useState<AvailableGymnastOption[]>([])
+  const [availableChamps, setAvailableChamps] = useState<AvailableChampionshipOption[]>([])
+  const [availableCategories, setAvailableCategories] = useState<AvailableCategoryOption[]>([])
+
+  const [formGymnastId, setFormGymnastId] = useState('')
+  const [formChampId, setFormChampId] = useState('')
+  const [formCatId, setFormCatId] = useState('')
+  const [formBib, setFormBib] = useState('')
+  const [formRotation, setFormRotation] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const loadClubData = useCallback(async () => {
+    if (!activeOrganization) {
+      setRegistrations([])
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      setIsLoading(true)
+      setErrorMsg(null)
+
+      // 1. Resolve Club for current organization
+      const { data: clubsData, error: clubErr } = await supabase
+        .from('clubs')
+        .select('id, name, code')
+        .eq('organization_id', activeOrganization.id)
+        .limit(1)
+
+      if (clubErr) throw clubErr
+
+      let activeClubId = clubId
+      if (clubsData && clubsData.length > 0) {
+        setClubName(clubsData[0].name)
+        setClubId(clubsData[0].id)
+        activeClubId = clubsData[0].id
+      }
+
+      // 2. Fetch registrations for this club (or organization)
+      let query = supabase
+        .from('registrations')
+        .select(`
+          id,
+          championship_id,
+          gymnast_id,
+          category_id,
+          club_id,
+          bib_number,
+          rotation_group,
+          status,
+          championships (
+            id,
+            name
+          ),
+          gymnasts (
+            id,
+            first_name,
+            last_name,
+            rut_or_id,
+            license_number
+          ),
+          categories (
+            name,
+            scoring_regime
+          ),
+          scores (
+            final_score,
+            status,
+            apparatuses (
+              code
+            )
+          )
+        `)
+        .order('created_at', { ascending: false })
+
+      if (activeClubId) {
+        query = query.eq('club_id', activeClubId)
+      }
+
+      const { data: regsData, error: regsErr } = await query
+      if (regsErr) throw regsErr
+
+      if (regsData) {
+        const mapped: ClubRegistrationRow[] = (regsData as unknown as Record<string, unknown>[]).map((row) => {
+          const gym = row.gymnasts as {
+            id: string
+            first_name: string
+            last_name: string
+            rut_or_id?: string
+            license_number?: string
+          } | null
+          const champ = row.championships as { id: string; name: string } | null
+          const cat = row.categories as { name: string; scoring_regime?: string } | null
+          const scoresRaw = (row.scores as {
+            final_score: number
+            status: string
+            apparatuses: { code: string } | null
+          }[]) || []
+
+          const scoresByApp: Record<string, number> = {}
+          let sumTotal = 0
+
+          for (const sc of scoresRaw) {
+            if (sc.status === 'official_approved' || sc.status === 'provisional') {
+              const code = sc.apparatuses?.code || 'APP'
+              scoresByApp[code] = Number(sc.final_score)
+              sumTotal += Number(sc.final_score)
+            }
+          }
+
+          return {
+            id: row.id as string,
+            championshipId: (champ?.id || row.championship_id) as string,
+            championshipName: champ?.name || 'Campeonato Oficial',
+            gymnastId: (gym?.id || row.gymnast_id) as string,
+            gymnastName: gym ? `${gym.first_name} ${gym.last_name}` : 'Gimnasta',
+            rutOrId: gym?.rut_or_id,
+            licenseNumber: gym?.license_number,
+            categoryName: cat?.name || 'General',
+            scoringRegime: (cat?.scoring_regime === 'obligatory' ? 'obligatory' : 'free') as 'free' | 'obligatory',
+            rotationGroup: (row.rotation_group as string) ?? undefined,
+            bibNumber: (row.bib_number as number) ?? undefined,
+            status: row.status as ClubRegistrationRow['status'],
+            scoresByApparatus: scoresByApp,
+            totalScore: Math.round(sumTotal * 1000) / 1000,
+          }
+        })
+        setRegistrations(mapped)
+      }
+
+      // 3. Load available gymnasts belonging to this club
+      if (activeClubId) {
+        const { data: gymData } = await supabase
+          .from('gymnasts')
+          .select('id, first_name, last_name, license_number')
+          .eq('club_id', activeClubId)
+          .order('last_name', { ascending: true })
+
+        if (gymData) {
+          setAvailableGymnasts(
+            gymData.map((g) => ({
+              id: g.id,
+              name: `${g.first_name} ${g.last_name}`,
+              licenseNumber: g.license_number ?? undefined,
+            }))
+          )
+          if (gymData.length > 0) {
+            setFormGymnastId(gymData[0].id)
+          }
+        }
+      }
+
+      // 4. Load active championships & categories
+      const { data: champsData } = await supabase
+        .from('championships')
+        .select('id, name')
+        .eq('organization_id', activeOrganization.id)
+        .order('start_date', { ascending: false })
+
+      if (champsData && champsData.length > 0) {
+        setAvailableChamps(champsData)
+        setFormChampId(champsData[0].id)
+
+        const { data: catsData } = await supabase
+          .from('categories')
+          .select('id, name, championship_id, scoring_regime')
+          .eq('championship_id', champsData[0].id)
+          .order('sort_order', { ascending: true })
+
+        if (catsData) {
+          setAvailableCategories(
+            catsData.map((c) => ({
+              id: c.id,
+              name: c.name,
+              championshipId: c.championship_id,
+              scoringRegime: (c.scoring_regime || 'free') as 'free' | 'obligatory',
+            }))
+          )
+          if (catsData.length > 0) {
+            setFormCatId(catsData[0].id)
+          }
+        }
+      }
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [activeOrganization, clubId])
+
+  useEffect(() => {
+    loadClubData()
+  }, [loadClubData])
+
+  // Handle championship change in enrollment form to reload categories
+  const handleChampChange = async (champId: string) => {
+    setFormChampId(champId)
+    const { data: catsData } = await supabase
+      .from('categories')
+      .select('id, name, championship_id, scoring_regime')
+      .eq('championship_id', champId)
+      .order('sort_order', { ascending: true })
+
+    if (catsData) {
+      setAvailableCategories(
+        catsData.map((c) => ({
+          id: c.id,
+          name: c.name,
+          championshipId: c.championship_id,
+          scoringRegime: (c.scoring_regime || 'free') as 'free' | 'obligatory',
+        }))
+      )
+      if (catsData.length > 0) {
+        setFormCatId(catsData[0].id)
+      }
+    }
+  }
+
+  const handleEnrollGymnast = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!clubId || !formGymnastId || !formChampId || !formCatId) {
+      setErrorMsg('Selecciona gimnasta, campeonato y categoría para inscribir.')
+      return
+    }
+
+    setIsSubmitting(true)
+    setErrorMsg(null)
+    setSuccessMsg(null)
+
+    try {
+      const { error } = await supabase.from('registrations').insert({
+        club_id: clubId,
+        gymnast_id: formGymnastId,
+        championship_id: formChampId,
+        category_id: formCatId,
+        bib_number: formBib ? parseInt(formBib, 10) : null,
+        rotation_group: formRotation || 'Subdivisión 1',
+        status: 'approved',
+      })
+
+      if (error) throw error
+
+      setSuccessMsg('¡Gimnasta inscrita y habilitada exitosamente en el campeonato!')
+      setIsRegistering(false)
+      setFormBib('')
+      setFormRotation('')
+      await loadClubData()
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -45,60 +321,237 @@ export const ClubManagerView: React.FC = () => {
             Portal del Club: Delegación & Estado de Inscripciones
           </h3>
           <p className="text-xs text-slate-500">
-            Vista exclusiva para tu club. No tienes acceso a datos médicos ni documentos privados de otros clubes.
+            Vista exclusiva y aislada para tu delegación. Consulta el estado de inscripciones, rotaciones y notas en vivo.
           </p>
         </div>
 
-        <Badge variant="default">Club Deportivo Manquehue (CDM)</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="default" className="bg-emerald-700 text-white font-semibold">
+            {clubName}
+          </Badge>
+          <button
+            type="button"
+            onClick={loadClubData}
+            className="rounded-lg border border-slate-300 bg-white p-1.5 text-slate-600 hover:bg-slate-50"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
+          {!isRegistering && (
+            <button
+              type="button"
+              onClick={() => setIsRegistering(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-800"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Inscribir Gimnasta
+            </button>
+          )}
+        </div>
       </div>
 
+      {errorMsg && (
+        <div className="flex items-center gap-2 rounded-lg bg-rose-50 p-3 text-xs text-rose-700 border border-rose-200">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {successMsg && (
+        <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-800 border border-emerald-200">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+          <span>{successMsg}</span>
+        </div>
+      )}
+
+      {/* MODAL / FORMULARIO DE INSCRIPCIÓN */}
+      {isRegistering && (
+        <Card className="border-blue-200 bg-blue-50/30 shadow-xs">
+          <h4 className="text-sm font-bold text-slate-900 mb-3">
+            Inscripción Oficial de Gimnasta a Campeonato
+          </h4>
+          <form onSubmit={handleEnrollGymnast} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Gimnasta del Club</label>
+                {availableGymnasts.length === 0 ? (
+                  <p className="text-xs text-amber-700 font-medium">No hay gimnastas dadas de alta en el club.</p>
+                ) : (
+                  <select
+                    value={formGymnastId}
+                    onChange={(e) => setFormGymnastId(e.target.value)}
+                    className="w-full rounded border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold focus:border-blue-600 focus:outline-none"
+                  >
+                    {availableGymnasts.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name} {g.licenseNumber ? `(${g.licenseNumber})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Campeonato Destino</label>
+                <select
+                  value={formChampId}
+                  onChange={(e) => handleChampChange(e.target.value)}
+                  className="w-full rounded border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold focus:border-blue-600 focus:outline-none"
+                >
+                  {availableChamps.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Categoría / Nivel Técnico</label>
+                {availableCategories.length === 0 ? (
+                  <p className="text-xs text-amber-700 font-medium">No hay categorías configuradas en este torneo.</p>
+                ) : (
+                  <select
+                    value={formCatId}
+                    onChange={(e) => setFormCatId(e.target.value)}
+                    className="w-full rounded border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold focus:border-blue-600 focus:outline-none"
+                  >
+                    {availableCategories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name} ({cat.scoringRegime === 'obligatory' ? 'Rutina Establecida' : 'Nivel Libre'})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Dorsal / N° Competición (Opcional)</label>
+                <input
+                  type="number"
+                  placeholder="Ej. 102"
+                  value={formBib}
+                  onChange={(e) => setFormBib(e.target.value)}
+                  className="w-full rounded border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-blue-600 focus:outline-none"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Subdivisión / Rotación Solicitada</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Subdivisión 1 • Rotación B"
+                  value={formRotation}
+                  onChange={(e) => setFormRotation(e.target.value)}
+                  className="w-full rounded border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-blue-600 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsRegistering(false)}
+                className="rounded border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || availableGymnasts.length === 0 || availableCategories.length === 0}
+                className="rounded bg-blue-700 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
+              >
+                {isSubmitting ? 'Inscribiendo...' : 'Confirmar Inscripción'}
+              </button>
+            </div>
+          </form>
+        </Card>
+      )}
+
+      {/* LISTADO DE INSCRIPCIONES REALES */}
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
-            Gimnastas Inscritas en el Campeonato Nacional 2026
+            Gimnastas Registradas en Competición Oficial
           </h4>
-          <span className="text-xs text-slate-500">Total: {myClubRegistrations.length} gimnastas</span>
+          <span className="text-xs text-slate-500">Total: {registrations.length} gimnastas</span>
         </div>
 
-        <table className="w-full text-left text-xs">
-          <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
-            <tr>
-              <th className="px-4 py-3 font-semibold">Gimnasta</th>
-              <th className="px-4 py-3 font-semibold">Categoría</th>
-              <th className="px-4 py-3 font-semibold">Horario / Rotación</th>
-              <th className="px-4 py-3 font-semibold">Estado Inscripción</th>
-              <th className="px-4 py-3 font-semibold text-right">Puntaje AA Registrado</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 text-slate-700">
-            {myClubRegistrations.map((reg) => (
-              <tr key={reg.id} className="hover:bg-slate-50/50">
-                <td className="px-4 py-3">
-                  <p className="font-bold text-slate-900">{reg.gymnast}</p>
-                  <p className="text-[10px] text-slate-400 font-mono">Licencia: {reg.license}</p>
-                </td>
-                <td className="px-4 py-3 font-medium text-slate-800">{reg.category}</td>
-                <td className="px-4 py-3 font-mono text-[11px] text-slate-600">{reg.rotation}</td>
-                <td className="px-4 py-3">
-                  {reg.status === 'approved' ? (
-                    <Badge variant="success" className="text-[10px]">Aprobada / Habilitada</Badge>
-                  ) : (
-                    <Badge variant="warning" className="text-[10px]">Pendiente de Pago / Visado</Badge>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {reg.scores ? (
-                    <span className="font-mono font-bold text-blue-900 text-sm">
-                      {reg.scores.total.toFixed(3)}
-                    </span>
-                  ) : (
-                    <span className="text-slate-400 font-mono">Sin competir</span>
-                  )}
-                </td>
+        {isLoading ? (
+          <div className="py-8 text-center text-xs text-slate-500">Cargando delegación del club...</div>
+        ) : registrations.length === 0 ? (
+          <div className="py-12 text-center">
+            <Trophy className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+            <p className="text-sm font-semibold text-slate-700">No hay inscripciones registradas para este club</p>
+            <p className="text-xs text-slate-400 mt-1">Usa el botón "Inscribir Gimnasta" para registrar a tus atletas.</p>
+          </div>
+        ) : (
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Gimnasta</th>
+                <th className="px-4 py-3 font-semibold">Campeonato</th>
+                <th className="px-4 py-3 font-semibold">Categoría / Nivel</th>
+                <th className="px-4 py-3 font-semibold">Subdivisión / Rotación</th>
+                <th className="px-4 py-3 font-semibold">Estado</th>
+                <th className="px-4 py-3 font-semibold text-right">Puntaje AA Oficial</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-700">
+              {registrations.map((reg) => (
+                <tr key={reg.id} className="hover:bg-slate-50/50">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900">{reg.gymnastName}</span>
+                      {reg.bibNumber && (
+                        <span className="font-mono text-[10px] bg-slate-100 px-1 rounded text-slate-600">
+                          #{reg.bibNumber}
+                        </span>
+                      )}
+                    </div>
+                    {reg.licenseNumber && (
+                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">Licencia: {reg.licenseNumber}</p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 font-medium text-slate-800">{reg.championshipName}</td>
+                  <td className="px-4 py-3">
+                    <span className="font-semibold text-slate-900">{reg.categoryName}</span>
+                    <Badge variant={reg.scoringRegime === 'obligatory' ? 'default' : 'outline'} className="ml-2 text-[9px]">
+                      {reg.scoringRegime === 'obligatory' ? 'Rutina Establecida' : 'Libre'}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-[11px] text-slate-600">
+                    {reg.rotationGroup || 'Por programar'}
+                  </td>
+                  <td className="px-4 py-3">
+                    {reg.status === 'approved' ? (
+                      <Badge variant="success" className="text-[10px]">Aprobada / Habilitada</Badge>
+                    ) : reg.status === 'pending_approval' ? (
+                      <Badge variant="warning" className="text-[10px]">Pendiente de Visado</Badge>
+                    ) : (
+                      <Badge variant="danger" className="text-[10px]">{reg.status}</Badge>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {reg.totalScore > 0 ? (
+                      <div>
+                        <span className="font-mono font-black text-blue-900 text-sm">
+                          {reg.totalScore.toFixed(3)}
+                        </span>
+                        <div className="text-[10px] font-mono text-slate-400 mt-0.5">
+                          {Object.entries(reg.scoresByApparatus)
+                            .map(([app, s]) => `${app}:${s.toFixed(2)}`)
+                            .join(' ')}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 font-mono">Sin competir aún</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   )
