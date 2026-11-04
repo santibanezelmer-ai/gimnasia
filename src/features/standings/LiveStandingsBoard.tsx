@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 export const LiveStandingsBoard: React.FC = () => {
   const [tab, setTab] = useState<'all_around' | 'apparatus' | 'teams'>('all_around')
   const [selectedApparatus, setSelectedApparatus] = useState<string>('VT')
+  const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [scores, setScores] = useState<GymnastScoreEntry[]>([])
   const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false)
 
@@ -31,6 +32,7 @@ export const LiveStandingsBoard: React.FC = () => {
           ),
           registrations (
             gymnast_id,
+            category_id,
             gymnasts (
               first_name,
               last_name
@@ -38,6 +40,11 @@ export const LiveStandingsBoard: React.FC = () => {
             clubs (
               id,
               name
+            ),
+            categories (
+              id,
+              name,
+              scoring_regime
             )
           )
         `)
@@ -53,8 +60,10 @@ export const LiveStandingsBoard: React.FC = () => {
           const app = row.apparatuses as { code: string } | null
           const reg = row.registrations as {
             gymnast_id: string
+            category_id?: string
             gymnasts: { first_name: string; last_name: string } | null
             clubs: { id: string; name: string } | null
+            categories: { id: string; name: string; scoring_regime?: string } | null
           } | null
 
           const gymnastName = reg?.gymnasts
@@ -62,12 +71,17 @@ export const LiveStandingsBoard: React.FC = () => {
             : 'Camila Valenzuela'
           const clubName = reg?.clubs?.name || 'Club Deportivo Manquehue'
           const clubId = reg?.clubs?.id || 'club-manquehue'
+          const cat = reg?.categories
+          const isOblig = cat?.scoring_regime === 'obligatory'
 
           return {
             gymnastId: reg?.gymnast_id || (row.id as string),
             gymnastName,
             clubId,
             clubName,
+            categoryId: cat?.id || reg?.category_id || 'general',
+            categoryName: cat?.name || 'General',
+            scoringRegime: isOblig ? 'obligatory' : 'free',
             apparatusCode: app?.code || 'VT',
             dScore: Number(row.d_score),
             eScoreAvg: Number(row.e_score_avg),
@@ -109,8 +123,16 @@ export const LiveStandingsBoard: React.FC = () => {
     }
   }, [loadLiveScores])
 
-  const allAround = computeAllAroundStandings(scores)
-  const apparatusStandings = computeApparatusStandings(scores, selectedApparatus)
+  const categoriesList = Array.from(
+    new Map(
+      scores
+        .filter((s) => s.categoryId && s.categoryName)
+        .map((s) => [s.categoryId!, { id: s.categoryId!, name: s.categoryName!, regime: s.scoringRegime }])
+    ).values()
+  )
+
+  const allAround = computeAllAroundStandings(scores, { categoryId: selectedCategory || undefined })
+  const apparatusStandings = computeApparatusStandings(scores, selectedApparatus, selectedCategory || undefined)
   const teamStandings = computeTeamStandings(scores)
 
   const medalBadge = (medal?: 'gold' | 'silver' | 'bronze') => {
@@ -160,7 +182,24 @@ export const LiveStandingsBoard: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Category Filter Selector */}
+          <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs">
+            <span className="font-semibold text-slate-500 text-[11px]">Categoría:</span>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="bg-transparent font-medium text-slate-900 focus:outline-none cursor-pointer"
+            >
+              <option value="">Todas las Categorías</option>
+              {categoriesList.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name} ({cat.regime === 'obligatory' ? 'Rutina Establecida' : 'Nivel Libre'})
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 text-xs">
             <button
               type="button"
@@ -221,6 +260,7 @@ export const LiveStandingsBoard: React.FC = () => {
                 <th className="px-4 py-3 font-semibold">Lugar</th>
                 <th className="px-4 py-3 font-semibold">Gimnasta</th>
                 <th className="px-4 py-3 font-semibold">Club / Delegación</th>
+                <th className="px-4 py-3 font-semibold">Categoría</th>
                 <th className="px-4 py-3 font-semibold text-center">VT</th>
                 <th className="px-4 py-3 font-semibold text-center">UB</th>
                 <th className="px-4 py-3 font-semibold text-center">BB</th>
@@ -239,6 +279,9 @@ export const LiveStandingsBoard: React.FC = () => {
                   </td>
                   <td className="px-4 py-3 font-bold text-slate-900">{row.gymnastName}</td>
                   <td className="px-4 py-3 text-slate-500">{row.clubName}</td>
+                  <td className="px-4 py-3">
+                    <span className="font-semibold text-slate-800">{row.categoryName || 'General'}</span>
+                  </td>
                   <td className="px-4 py-3 text-center font-mono">{row.apparatusScores.VT?.toFixed(3) || '-'}</td>
                   <td className="px-4 py-3 text-center font-mono">{row.apparatusScores.UB?.toFixed(3) || '-'}</td>
                   <td className="px-4 py-3 text-center font-mono">{row.apparatusScores.BB?.toFixed(3) || '-'}</td>
@@ -261,6 +304,7 @@ export const LiveStandingsBoard: React.FC = () => {
                 <th className="px-4 py-3 font-semibold">Lugar</th>
                 <th className="px-4 py-3 font-semibold">Gimnasta</th>
                 <th className="px-4 py-3 font-semibold">Club</th>
+                <th className="px-4 py-3 font-semibold">Categoría</th>
                 <th className="px-4 py-3 font-semibold text-center">Nota D</th>
                 <th className="px-4 py-3 font-semibold text-center">Promedio E (Desempate)</th>
                 <th className="px-4 py-3 font-semibold text-right">Nota Final</th>
@@ -277,6 +321,9 @@ export const LiveStandingsBoard: React.FC = () => {
                   </td>
                   <td className="px-4 py-3 font-bold text-slate-900">{row.gymnastName}</td>
                   <td className="px-4 py-3 text-slate-500">{row.clubName}</td>
+                  <td className="px-4 py-3">
+                    <span className="font-semibold text-slate-800">{row.categoryName || 'General'}</span>
+                  </td>
                   <td className="px-4 py-3 text-center font-mono">{row.dScore.toFixed(3)}</td>
                   <td className="px-4 py-3 text-center font-mono text-emerald-700 font-semibold">
                     {row.eScoreAvg.toFixed(3)}
@@ -343,6 +390,9 @@ function getDemoSeedScores(): GymnastScoreEntry[] {
       gymnastName: 'Florencia Castro',
       clubId: 'c1',
       clubName: 'Club Estadio Italiano',
+      categoryId: 'cat-senior',
+      categoryName: 'FIG Senior',
+      scoringRegime: 'free',
       apparatusCode: 'VT',
       dScore: 5.2,
       eScoreAvg: 8.7,
@@ -354,6 +404,9 @@ function getDemoSeedScores(): GymnastScoreEntry[] {
       gymnastName: 'Florencia Castro',
       clubId: 'c1',
       clubName: 'Club Estadio Italiano',
+      categoryId: 'cat-senior',
+      categoryName: 'FIG Senior',
+      scoringRegime: 'free',
       apparatusCode: 'UB',
       dScore: 4.9,
       eScoreAvg: 8.2,
@@ -365,6 +418,9 @@ function getDemoSeedScores(): GymnastScoreEntry[] {
       gymnastName: 'Florencia Castro',
       clubId: 'c1',
       clubName: 'Club Estadio Italiano',
+      categoryId: 'cat-senior',
+      categoryName: 'FIG Senior',
+      scoringRegime: 'free',
       apparatusCode: 'BB',
       dScore: 5.1,
       eScoreAvg: 8.3,
@@ -376,6 +432,9 @@ function getDemoSeedScores(): GymnastScoreEntry[] {
       gymnastName: 'Florencia Castro',
       clubId: 'c1',
       clubName: 'Club Estadio Italiano',
+      categoryId: 'cat-senior',
+      categoryName: 'FIG Senior',
+      scoringRegime: 'free',
       apparatusCode: 'FX',
       dScore: 5.3,
       eScoreAvg: 8.4,
@@ -387,6 +446,9 @@ function getDemoSeedScores(): GymnastScoreEntry[] {
       gymnastName: 'Camila Valenzuela',
       clubId: 'c2',
       clubName: 'Club Deportivo Manquehue',
+      categoryId: 'cat-senior',
+      categoryName: 'FIG Senior',
+      scoringRegime: 'free',
       apparatusCode: 'VT',
       dScore: 5.0,
       eScoreAvg: 8.6,
@@ -398,6 +460,9 @@ function getDemoSeedScores(): GymnastScoreEntry[] {
       gymnastName: 'Camila Valenzuela',
       clubId: 'c2',
       clubName: 'Club Deportivo Manquehue',
+      categoryId: 'cat-senior',
+      categoryName: 'FIG Senior',
+      scoringRegime: 'free',
       apparatusCode: 'UB',
       dScore: 5.2,
       eScoreAvg: 8.4,
@@ -409,6 +474,9 @@ function getDemoSeedScores(): GymnastScoreEntry[] {
       gymnastName: 'Camila Valenzuela',
       clubId: 'c2',
       clubName: 'Club Deportivo Manquehue',
+      categoryId: 'cat-senior',
+      categoryName: 'FIG Senior',
+      scoringRegime: 'free',
       apparatusCode: 'BB',
       dScore: 4.8,
       eScoreAvg: 8.2,
@@ -420,10 +488,42 @@ function getDemoSeedScores(): GymnastScoreEntry[] {
       gymnastName: 'Camila Valenzuela',
       clubId: 'c2',
       clubName: 'Club Deportivo Manquehue',
+      categoryId: 'cat-senior',
+      categoryName: 'FIG Senior',
+      scoringRegime: 'free',
       apparatusCode: 'FX',
       dScore: 5.1,
       eScoreAvg: 8.3,
       finalScore: 13.4,
+      status: 'official_approved',
+    },
+    // Nivel Obligatorio (Rutina Establecida - D fija 10.000)
+    {
+      gymnastId: 'g3',
+      gymnastName: 'Martina Rojas',
+      clubId: 'c2',
+      clubName: 'Club Deportivo Manquehue',
+      categoryId: 'cat-usag3',
+      categoryName: 'Nivel 3 USAG',
+      scoringRegime: 'obligatory',
+      apparatusCode: 'VT',
+      dScore: 10.0,
+      eScoreAvg: 8.9,
+      finalScore: 18.9,
+      status: 'official_approved',
+    },
+    {
+      gymnastId: 'g3',
+      gymnastName: 'Martina Rojas',
+      clubId: 'c2',
+      clubName: 'Club Deportivo Manquehue',
+      categoryId: 'cat-usag3',
+      categoryName: 'Nivel 3 USAG',
+      scoringRegime: 'obligatory',
+      apparatusCode: 'UB',
+      dScore: 10.0,
+      eScoreAvg: 8.7,
+      finalScore: 18.7,
       status: 'official_approved',
     },
   ]

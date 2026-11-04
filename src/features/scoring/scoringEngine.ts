@@ -42,6 +42,8 @@ export function calculateFigScore(input: ScoreInput): ScoreCalculationResult {
   const { eScores, neutralDeductions = 0, isObligatory = false, fixedDScore = 10.0 } = input
   // Si es obligatorio, la nota D está establecida de antemano y no se califica en vivo
   const effectiveDScore = isObligatory ? fixedDScore : input.dScore
+  // Sanitizar deducciones neutrales: si el usuario ingresó número negativo (ej. -0.3), tomamos su valor absoluto
+  const sanitizedND = Math.abs(neutralDeductions)
 
   if (!eScores || eScores.length === 0) {
     throw new Error('At least one Execution (E) score is required.')
@@ -50,9 +52,6 @@ export function calculateFigScore(input: ScoreInput): ScoreCalculationResult {
   // Validate values
   if (effectiveDScore < 0) {
     throw new Error('D-score cannot be negative.')
-  }
-  if (neutralDeductions < 0) {
-    throw new Error('Neutral deductions cannot be negative.')
   }
   for (const score of eScores) {
     if (score < 0 || score > 10) {
@@ -80,8 +79,8 @@ export function calculateFigScore(input: ScoreInput): ScoreCalculationResult {
   const sum = usedScores.reduce((acc, curr) => acc + curr, 0)
   const eScoreAverage = roundScore(sum / usedScores.length, 3)
 
-  // Final score = D + E - ND
-  const rawFinal = effectiveDScore + eScoreAverage - neutralDeductions
+  // Final score = D + E - ND (sanitizada)
+  const rawFinal = effectiveDScore + eScoreAverage - sanitizedND
   const finalScore = roundScore(Math.max(0, rawFinal), 3)
 
   return {
@@ -91,7 +90,7 @@ export function calculateFigScore(input: ScoreInput): ScoreCalculationResult {
     eScoreDiscardedHigh: discardedHigh,
     eScoreDiscardedLow: discardedLow,
     eScoreAverage,
-    neutralDeductions: roundScore(neutralDeductions, 3),
+    neutralDeductions: roundScore(sanitizedND, 3),
     finalScore,
   }
 }

@@ -15,6 +15,8 @@ interface ActiveRegistrationOption {
   clubName: string
   categoryName: string
   championshipId: string
+  scoringRegime: 'free' | 'obligatory'
+  defaultFixedDScore: number
 }
 
 interface ApparatusOption {
@@ -85,20 +87,39 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({ onScoreSaved }) => {
           const club = r.clubs as { name: string } | null
           const cat = r.categories as { name: string; scoring_regime?: string; default_fixed_d_score?: number } | null
 
+          const isOblig = cat?.scoring_regime === 'obligatory'
+          const fixedVal = cat?.default_fixed_d_score ? Number(cat.default_fixed_d_score) : 10.0
+
           return {
             registrationId: r.id as string,
             gymnastName: gym ? `${gym.first_name} ${gym.last_name}` : 'Gimnasta',
             clubName: club?.name || 'Club',
             categoryName: cat?.name || 'General',
             championshipId: r.championship_id as string,
+            scoringRegime: (isOblig ? 'obligatory' : 'free') as 'free' | 'obligatory',
+            defaultFixedDScore: fixedVal,
           }
         })
         setRegistrations(mapped)
         setSelectedRegId(mapped[0].registrationId)
+        // Auto-sync initial regime
+        setIsObligatory(mapped[0].scoringRegime === 'obligatory')
+        setFixedD(mapped[0].defaultFixedDScore.toString())
       }
     }
     loadPadData()
   }, [])
+
+  // Auto-sync scoring regime whenever selected registration changes
+  useEffect(() => {
+    if (!selectedRegId) return
+    const reg = registrations.find((r) => r.registrationId === selectedRegId)
+    if (reg) {
+      const isOblig = reg.scoringRegime === 'obligatory'
+      setIsObligatory(isOblig)
+      setFixedD(reg.defaultFixedDScore.toString())
+    }
+  }, [selectedRegId, registrations])
 
   let result = null
   let calculationError = null
@@ -223,7 +244,7 @@ export const ScoringPad: React.FC<ScoringPadProps> = ({ onScoreSaved }) => {
             >
               {registrations.map((r) => (
                 <option key={r.registrationId} value={r.registrationId}>
-                  {r.gymnastName} • {r.clubName} ({r.categoryName})
+                  {r.gymnastName} • {r.clubName} ({r.categoryName} — {r.scoringRegime === 'obligatory' ? 'Rutina Establecida' : 'Nivel Libre'})
                 </option>
               ))}
             </select>

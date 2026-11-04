@@ -13,6 +13,9 @@ export interface GymnastScoreEntry {
   gymnastName: string
   clubId: string
   clubName: string
+  categoryId?: string
+  categoryName?: string
+  scoringRegime?: 'free' | 'obligatory'
   apparatusCode: string
   dScore: number
   eScoreAvg: number
@@ -26,6 +29,8 @@ export interface AllAroundStanding {
   gymnastName: string
   clubId: string
   clubName: string
+  categoryId?: string
+  categoryName?: string
   apparatusScores: Record<string, number>
   totalScore: number
   totalEScore: number
@@ -39,6 +44,8 @@ export interface ApparatusStanding {
   gymnastName: string
   clubId: string
   clubName: string
+  categoryId?: string
+  categoryName?: string
   dScore: number
   eScoreAvg: number
   finalScore: number
@@ -57,15 +64,23 @@ export interface TeamStanding {
 
 /**
  * Computes All-Around Individual Standings from approved/provisional scores.
+ * Can be filtered by categoryId to prevent mixing Olympic/Free and Obligatory regimes.
  * Tiebreaker: Higher total E-score sum.
  */
 export function computeAllAroundStandings(
   scores: GymnastScoreEntry[],
-  _requiredApparatusCount = 4
+  optionsOrRequiredCount?: number | { categoryId?: string; requiredApparatusCount?: number }
 ): AllAroundStanding[] {
-  // Only include official approved or provisional scores
+  const categoryIdFilter =
+    typeof optionsOrRequiredCount === 'object'
+      ? optionsOrRequiredCount?.categoryId
+      : undefined
+
+  // Only include official approved or provisional scores, optionally filtered by category
   const validScores = scores.filter(
-    (s) => s.status === 'official_approved' || s.status === 'provisional'
+    (s) =>
+      (s.status === 'official_approved' || s.status === 'provisional') &&
+      (!categoryIdFilter || s.categoryId === categoryIdFilter)
   )
 
   const gymnastMap = new Map<
@@ -74,6 +89,8 @@ export function computeAllAroundStandings(
       gymnastName: string
       clubId: string
       clubName: string
+      categoryId?: string
+      categoryName?: string
       apparatusScores: Record<string, number>
       totalScore: number
       totalEScore: number
@@ -86,6 +103,8 @@ export function computeAllAroundStandings(
         gymnastName: s.gymnastName,
         clubId: s.clubId,
         clubName: s.clubName,
+        categoryId: s.categoryId,
+        categoryName: s.categoryName,
         apparatusScores: {},
         totalScore: 0,
         totalEScore: 0,
@@ -124,6 +143,8 @@ export function computeAllAroundStandings(
       gymnastName: entry.gymnastName,
       clubId: entry.clubId,
       clubName: entry.clubName,
+      categoryId: entry.categoryId,
+      categoryName: entry.categoryName,
       apparatusScores: entry.apparatusScores,
       totalScore: entry.totalScore,
       totalEScore: entry.totalEScore,
@@ -134,16 +155,19 @@ export function computeAllAroundStandings(
 
 /**
  * Computes Apparatus Standings for a single apparatus.
+ * Can be filtered by categoryId.
  * Tiebreaker: Higher E-score average.
  */
 export function computeApparatusStandings(
   scores: GymnastScoreEntry[],
-  apparatusCode: string
+  apparatusCode: string,
+  categoryId?: string
 ): ApparatusStanding[] {
   const filtered = scores.filter(
     (s) =>
       s.apparatusCode === apparatusCode &&
-      (s.status === 'official_approved' || s.status === 'provisional')
+      (s.status === 'official_approved' || s.status === 'provisional') &&
+      (!categoryId || s.categoryId === categoryId)
   )
 
   const sorted = [...filtered].sort((a, b) => {
@@ -167,6 +191,8 @@ export function computeApparatusStandings(
       gymnastName: entry.gymnastName,
       clubId: entry.clubId,
       clubName: entry.clubName,
+      categoryId: entry.categoryId,
+      categoryName: entry.categoryName,
       dScore: entry.dScore,
       eScoreAvg: entry.eScoreAvg,
       finalScore: entry.finalScore,

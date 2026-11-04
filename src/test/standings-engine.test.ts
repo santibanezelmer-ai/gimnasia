@@ -184,4 +184,53 @@ describe('Gymnastics Standings Engine (Phase 10 & 11)', () => {
     expect(teams[1].trophy).toBe('2nd')
     expect(teams[1].totalScore).toBe(52.5)
   })
+
+  it('isolates All-Around standings by category to prevent mixing Olympic free with Obligatory routines', () => {
+    const mixedScores: GymnastScoreEntry[] = [
+      // Senior FIG Free Level: Total = 13.5
+      {
+        gymnastId: 'senior-1',
+        gymnastName: 'Senior Athlete',
+        clubId: 'club-a',
+        clubName: 'Club A',
+        categoryId: 'cat-senior',
+        categoryName: 'FIG Senior',
+        scoringRegime: 'free',
+        apparatusCode: 'VT',
+        dScore: 5.0,
+        eScoreAvg: 8.5,
+        finalScore: 13.5,
+        status: 'official_approved',
+      },
+      // Obligatory Level with fixed D=10.0: Total = 18.5
+      {
+        gymnastId: 'oblig-1',
+        gymnastName: 'Obligatory Routine Athlete',
+        clubId: 'club-b',
+        clubName: 'Club B',
+        categoryId: 'cat-obligatory',
+        categoryName: 'Nivel 3 USAG',
+        scoringRegime: 'obligatory',
+        apparatusCode: 'VT',
+        dScore: 10.0,
+        eScoreAvg: 8.5,
+        finalScore: 18.5,
+        status: 'official_approved',
+      },
+    ]
+
+    // When filtered by senior category
+    const seniorStandings = computeAllAroundStandings(mixedScores, { categoryId: 'cat-senior' })
+    expect(seniorStandings).toHaveLength(1)
+    expect(seniorStandings[0].gymnastName).toBe('Senior Athlete')
+    expect(seniorStandings[0].rank).toBe(1)
+    expect(seniorStandings[0].medal).toBe('gold')
+
+    // When filtered by obligatory category
+    const obligStandings = computeAllAroundStandings(mixedScores, { categoryId: 'cat-obligatory' })
+    expect(obligStandings).toHaveLength(1)
+    expect(obligStandings[0].gymnastName).toBe('Obligatory Routine Athlete')
+    expect(obligStandings[0].rank).toBe(1)
+    expect(obligStandings[0].medal).toBe('gold')
+  })
 })

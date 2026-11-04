@@ -240,8 +240,8 @@ const DashboardContent: React.FC = () => {
                   <div className="space-y-8">
                     <HeadJudgeView />
                     <div className="space-y-3">
-                      <h4 className="text-sm font-bold text-slate-900">Simulador de Terminal de Jurado FIG</h4>
-                      <ScoringPad gymnastName="Camila Valenzuela • Salto (VT)" />
+                      <h4 className="text-sm font-bold text-slate-900">Terminal de Jurado FIG & Rutinas Establecidas</h4>
+                      <ScoringPad />
                     </div>
                     <LiveStandingsBoard />
                   </div>
@@ -267,7 +267,7 @@ const DashboardContent: React.FC = () => {
             {activeTab === 'judging' && (
               <div className="space-y-8">
                 {activeRole === 'head_judge' && <HeadJudgeView />}
-                <ScoringPad gymnastName="Camila Valenzuela • Club Manquehue" apparatusName="Salto (VT) - Ronda Final" />
+                <ScoringPad />
               </div>
             )}
             {activeTab === 'standings' && <LiveStandingsBoard />}

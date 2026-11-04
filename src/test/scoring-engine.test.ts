@@ -101,4 +101,15 @@ describe('FIG Gymnastics Scoring Engine Tests (Phases 8 & 9)', () => {
     expect(result.eScoreAverage).toBe(8.75)
     expect(result.finalScore).toBe(18.65)
   })
+
+  it('safely handles negative neutral deduction input without throwing', () => {
+    const result = calculateFigScore({
+      dScore: 5.0,
+      eScores: [8.5],
+      neutralDeductions: -0.3,
+    })
+
+    expect(result.neutralDeductions).toBe(0.3)
+    expect(result.finalScore).toBe(13.2)
+  })
 })
