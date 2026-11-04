@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { AuthProvider, useAuth } from '@/features/auth/AuthContext'
 import { OrganizationProvider, useOrganization } from '@/features/organizations/OrganizationContext'
-import { AuthForm } from '@/features/auth/AuthForm'
 import { TenantSwitcher } from '@/features/organizations/TenantSwitcher'
 import { ChampionshipsManager } from '@/features/championships/ChampionshipsManager'
 import { DelegationsManager } from '@/features/delegations/DelegationsManager'
@@ -10,7 +9,7 @@ import { LiveStandingsBoard } from '@/features/standings/LiveStandingsBoard'
 import { HeadJudgeView } from '@/features/views/HeadJudgeView'
 import { ClubManagerView } from '@/features/views/ClubManagerView'
 import { SubscriptionPlansView } from '@/features/billing/SubscriptionPlansView'
-import { FastJudgeTerminal } from '@/features/scoring/FastJudgeTerminal'
+import { LandingPage } from '@/features/landing/LandingPage'
 import { Badge } from '@/components/ui/badge'
 import {
   Trophy,
@@ -21,10 +20,8 @@ import {
   Flame,
   Zap,
   LayoutDashboard,
-  KeyRound,
   ShieldCheck,
   Activity,
-  Sparkles,
 } from 'lucide-react'
 
 const DashboardContent: React.FC = () => {
@@ -33,7 +30,6 @@ const DashboardContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
     'overview' | 'championships' | 'delegations' | 'judging' | 'standings' | 'billing'
   >('overview')
-  const [authMode, setAuthMode] = useState<'login' | 'fast_judge' | 'live_standings'>('login')
 
   type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'outline'
 
@@ -212,65 +208,7 @@ const DashboardContent: React.FC = () => {
       {/* Main Content Viewport */}
       <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
         {!user ? (
-          <div className="py-2">
-            {/* Modern Guest Hero Header */}
-            <div className="max-w-xl mx-auto mb-8 text-center space-y-3">
-              <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-xs font-bold text-blue-700 shadow-2xs">
-                <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-                SaaS Multiempresa de Gimnasia Deportiva
-              </div>
-              <h2 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
-                Operix Gymnastics
-              </h2>
-              <p className="text-sm text-slate-600 max-w-md mx-auto">
-                Selecciona tu modo de acceso para administrar torneos, puntuar como jurado o seguir las clasificaciones en directo.
-              </p>
-
-              {/* Segmented Switcher for Guest Access */}
-              <div className="mt-6 inline-flex rounded-2xl border border-slate-200/90 bg-white p-1.5 text-xs shadow-xs">
-                <button
-                  type="button"
-                  onClick={() => setAuthMode('login')}
-                  className={`rounded-xl px-4 py-2 font-bold transition-all flex items-center gap-2 ${
-                    authMode === 'login'
-                      ? 'bg-blue-700 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <Building2 className="h-4 w-4" />
-                  <span>Club / Federación</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAuthMode('fast_judge')}
-                  className={`rounded-xl px-4 py-2 font-bold transition-all flex items-center gap-2 ${
-                    authMode === 'fast_judge'
-                      ? 'bg-indigo-700 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <KeyRound className="h-4 w-4" />
-                  <span>Acceso Juez (Con Código)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAuthMode('live_standings')}
-                  className={`rounded-xl px-4 py-2 font-bold transition-all flex items-center gap-2 ${
-                    authMode === 'live_standings'
-                      ? 'bg-orange-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <Flame className="h-4 w-4" />
-                  <span>Resultados en Vivo</span>
-                </button>
-              </div>
-            </div>
-
-            {authMode === 'login' && <AuthForm />}
-            {authMode === 'fast_judge' && <FastJudgeTerminal />}
-            {authMode === 'live_standings' && <LiveStandingsBoard />}
-          </div>
+          <LandingPage />
         ) : (
           <div className="space-y-6 sm:space-y-8">
             {/* Modern Organization Command Center Banner */}
