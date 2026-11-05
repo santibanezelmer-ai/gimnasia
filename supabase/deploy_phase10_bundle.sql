@@ -173,7 +173,7 @@ CREATE OR REPLACE FUNCTION public.current_user_has_championship_role(
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_org_id UUID;
@@ -208,7 +208,7 @@ CREATE OR REPLACE FUNCTION public.can_view_championship_public_data(
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_champ RECORD;
@@ -271,7 +271,7 @@ CREATE OR REPLACE FUNCTION public.is_judge_assigned_to_score(
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_score RECORD;
@@ -328,7 +328,7 @@ CREATE OR REPLACE FUNCTION public.prevent_score_audits_tampering()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     RAISE EXCEPTION 'OPERIX_SECURITY_VIOLATION: La tabla score_audits es estrictamente inmutable (append-only). Las operaciones de UPDATE y DELETE están prohibidas por normativa reglamentaria.';
@@ -339,6 +339,9 @@ DROP TRIGGER IF EXISTS trg_prevent_score_audits_tampering ON public.score_audits
 CREATE TRIGGER trg_prevent_score_audits_tampering
     BEFORE UPDATE OR DELETE ON public.score_audits
     FOR EACH ROW EXECUTE FUNCTION public.prevent_score_audits_tampering();
+
+REVOKE EXECUTE ON FUNCTION public.prevent_score_audits_tampering() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.prevent_score_audits_tampering() TO authenticated;
 
 REVOKE UPDATE, DELETE, TRUNCATE ON public.score_audits FROM public, anon, authenticated;
 GRANT SELECT, INSERT ON public.score_audits TO authenticated;
@@ -360,7 +363,7 @@ CREATE OR REPLACE FUNCTION public.submit_fast_judge_score(
 RETURNS UUID
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_score_id UUID;
