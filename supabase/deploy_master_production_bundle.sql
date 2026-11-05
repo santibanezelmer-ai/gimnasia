@@ -118,9 +118,12 @@ CREATE TABLE IF NOT EXISTS public.championship_awards_ceremonies (
 CREATE TABLE IF NOT EXISTS public.score_deductions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     score_id UUID NOT NULL REFERENCES public.scores(id) ON DELETE CASCADE,
+    judge_id UUID REFERENCES public.judges(id) ON DELETE SET NULL,
     judge_assignment_id UUID REFERENCES public.judge_assignments(id) ON DELETE SET NULL,
-    deduction_type TEXT NOT NULL, -- 'execution', 'artistic', 'landing', 'line', 'time', 'behavior'
-    amount NUMERIC(4, 3) NOT NULL CHECK (amount >= 0.0),
+    deduction_type TEXT NOT NULL, -- 'execution_fall', 'out_of_bounds', 'time_violation', 'landing_step', 'neutral'
+    points NUMERIC(5, 3) NOT NULL, -- e.g. 0.100, 0.300, 0.500, 1.000
+    amount NUMERIC(5, 3), -- alias compatible con amount
+    notes TEXT,
     description TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
@@ -128,20 +131,22 @@ CREATE TABLE IF NOT EXISTS public.score_deductions (
 -- 1.8 Reclamaciones Técnicas de Dificultad (FIG Art. 5.4)
 CREATE TABLE IF NOT EXISTS public.technical_inquiries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    score_id UUID NOT NULL REFERENCES public.scores(id) ON DELETE CASCADE,
     championship_id UUID NOT NULL REFERENCES public.championships(id) ON DELETE CASCADE,
+    score_id UUID NOT NULL REFERENCES public.scores(id) ON DELETE CASCADE,
     club_id UUID NOT NULL REFERENCES public.clubs(id) ON DELETE CASCADE,
     gymnast_id UUID NOT NULL REFERENCES public.gymnasts(id) ON DELETE CASCADE,
-    submitted_by_user_id UUID NOT NULL REFERENCES public.profiles(id),
-    original_d_score NUMERIC(5, 3) NOT NULL,
-    expected_d_score NUMERIC(5, 3) NOT NULL,
+    submitted_by_user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     inquiry_reason TEXT NOT NULL,
+    original_d_score NUMERIC(5, 3) NOT NULL,
+    requested_d_score NUMERIC(5, 3),
+    resolved_d_score NUMERIC(5, 3),
+    fee_paid BOOLEAN NOT NULL DEFAULT FALSE,
     fee_deposit_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
     fee_deposit_status TEXT NOT NULL DEFAULT 'pending', -- 'pending' | 'verified' | 'refunded' | 'forfeited'
     fee_deposit_receipt_url TEXT,
     status TEXT NOT NULL DEFAULT 'submitted', -- 'submitted' | 'under_review' | 'accepted' | 'rejected'
     resolution_notes TEXT,
-    resolved_by_user_id UUID REFERENCES public.profiles(id),
+    resolved_by_user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     resolved_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
@@ -436,25 +441,82 @@ END;
 $$;
 
 -- 3.5 Verificación de asignación de juez a puntuación
+DROP FUNCTION IF EXISTS public.is_judge_assigned_to_score(UUID);
+DROP FUNCTION IF EXISTS public.is_judge_assigned_to_score(UUID, UUID);
+
 CREATE OR REPLACE FUNCTION public.is_judge_assigned_to_score(
     target_score_id UUID,
-    target_user_id UUID
+    target_user_id UUID DEFAULT auth.uid()
 )
 RETURNS BOOLEAN
-LANGUAGE sql
+LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = pg_catalog
 STABLE
 AS $$
-    SELECT EXISTS (
-        SELECT 1
-        FROM public.scores s
-        JOIN public.judge_assignments ja ON ja.championship_id = s.championship_id 
-                                        AND ja.apparatus_id = s.apparatus_id
+DECLARE
+    v_uid UUID;
+    v_score RECORD;
+BEGIN
+    v_uid := COALESCE(target_user_id, auth.uid());
+    IF v_uid IS NULL THEN
+        RETURN FALSE;
+    END IF;
+
+    -- 1. SuperAdmin de la plataforma
+    IF EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE id = v_uid AND platform_role = 'platform_admin'
+    ) THEN
+        RETURN TRUE;
+    END IF;
+
+    SELECT s.championship_id, s.apparatus_id, s.submitted_by_judge_id, s.status, j.user_id AS judge_user_id
+    INTO v_score
+    FROM public.scores s
+    LEFT JOIN public.judges j ON j.id = s.submitted_by_judge_id
+    WHERE s.id = target_score_id;
+
+    IF NOT FOUND THEN
+        RETURN FALSE;
+    END IF;
+
+    -- Si la nota ya fue aprobada oficialmente, un juez de panel no puede modificarla
+    IF v_score.status::TEXT IN ('official_approved', 'approved') THEN
+        RETURN EXISTS (
+            SELECT 1 FROM public.championships c
+            JOIN public.organization_members om ON om.organization_id = c.organization_id
+            WHERE c.id = v_score.championship_id
+              AND om.user_id = v_uid
+              AND om.role IN ('org_admin', 'competition_manager', 'head_judge')
+        );
+    END IF;
+
+    -- Si el usuario es el juez que emitió la nota
+    IF v_score.judge_user_id = v_uid THEN
+        RETURN TRUE;
+    END IF;
+
+    -- Si el usuario está asignado oficialmente al aparato en este torneo
+    IF EXISTS (
+        SELECT 1 FROM public.judge_assignments ja
         JOIN public.judges j ON j.id = ja.judge_id
-        WHERE s.id = target_score_id
-          AND j.user_id = target_user_id
+        WHERE ja.championship_id = v_score.championship_id
+          AND ja.apparatus_id = v_score.apparatus_id
+          AND j.user_id = v_uid
+    ) THEN
+        RETURN TRUE;
+    END IF;
+
+    -- Autoridades con potestad técnica
+    RETURN EXISTS (
+        SELECT 1 FROM public.championships c
+        JOIN public.organization_members om ON om.organization_id = c.organization_id
+        WHERE c.id = v_score.championship_id
+          AND om.user_id = v_uid
+          AND om.role IN ('org_admin', 'competition_manager', 'head_judge')
     );
+END;
 $$;
 
 -- 3.6 Inmutabilidad WORM de auditoría (por fila)
@@ -496,7 +558,10 @@ BEGIN
 END;
 $$;
 
--- 3.9 Puntuación Rápida con PIN de Juez
+-- 3.9 Puntuación Rápida con PIN de Juez (Soporte Salto 2 intentos FIG)
+DROP FUNCTION IF EXISTS public.submit_fast_judge_score(UUID, TEXT, UUID, UUID, TEXT, NUMERIC, JSONB, NUMERIC, NUMERIC, NUMERIC);
+DROP FUNCTION IF EXISTS public.submit_fast_judge_score(UUID, TEXT, UUID, UUID, TEXT, NUMERIC, JSONB, NUMERIC, NUMERIC, NUMERIC, INT);
+
 CREATE OR REPLACE FUNCTION public.submit_fast_judge_score(
     p_championship_id UUID,
     p_judge_code TEXT,
@@ -507,7 +572,8 @@ CREATE OR REPLACE FUNCTION public.submit_fast_judge_score(
     p_e_scores JSONB,
     p_e_score_avg NUMERIC(5, 3),
     p_neutral_deductions NUMERIC(5, 3),
-    p_final_score NUMERIC(5, 3)
+    p_final_score NUMERIC(5, 3),
+    p_attempt_number INT DEFAULT 1
 )
 RETURNS UUID
 LANGUAGE plpgsql
@@ -519,12 +585,18 @@ DECLARE
     v_expected_code TEXT;
     v_champ_status public.championship_status;
     v_existing_status public.score_status;
+    v_attempt INT;
 BEGIN
+    v_attempt := COALESCE(p_attempt_number, 1);
+    IF v_attempt NOT IN (1, 2) THEN
+        RAISE EXCEPTION 'El número de intento debe ser 1 o 2.';
+    END IF;
+
     SELECT c.judge_code, c.status INTO v_expected_code, v_champ_status
     FROM public.championships c
     WHERE c.id = p_championship_id;
 
-    IF v_expected_code IS NULL OR v_expected_code <> p_judge_code THEN
+    IF v_expected_code IS NULL OR TRIM(UPPER(v_expected_code)) <> TRIM(UPPER(p_judge_code)) THEN
         RAISE EXCEPTION 'ACCESO DENEGADO: Código de juez inválido para este campeonato.';
     END IF;
 
@@ -532,61 +604,58 @@ BEGIN
         RAISE EXCEPTION 'COMPETICIÓN NO ACTIVA: Solo se pueden ingresar notas en campeonatos en curso.';
     END IF;
 
-    SELECT s.id, s.status INTO v_score_id, v_existing_status
+    SELECT s.status INTO v_existing_status
     FROM public.scores s
     WHERE s.championship_id = p_championship_id
       AND s.registration_id = p_registration_id
-      AND s.apparatus_id = p_apparatus_id;
+      AND s.apparatus_id = p_apparatus_id
+      AND s.attempt_number = v_attempt;
 
-    IF v_score_id IS NOT NULL THEN
-        IF v_existing_status = 'approved' THEN
-            RAISE EXCEPTION 'PUNTUACIÓN BLOQUEADA: La nota ya ha sido aprobada oficialmente por el Juez Árbitro y no puede ser sobrescrita.';
-        END IF;
-
-        UPDATE public.scores
-        SET
-            d_score = p_d_score,
-            e_scores = p_e_scores,
-            e_score_avg = p_e_score_avg,
-            neutral_deductions = p_neutral_deductions,
-            final_score = p_final_score,
-            submitted_by_judge_id = NULL,
-            judge_name = p_judge_name,
-            status = 'provisional',
-            updated_at = timezone('utc'::text, now())
-        WHERE id = v_score_id;
-
-        RETURN v_score_id;
-    ELSE
-        INSERT INTO public.scores (
-            championship_id,
-            registration_id,
-            apparatus_id,
-            d_score,
-            e_scores,
-            e_score_avg,
-            neutral_deductions,
-            final_score,
-            submitted_by_judge_id,
-            judge_name,
-            status
-        ) VALUES (
-            p_championship_id,
-            p_registration_id,
-            p_apparatus_id,
-            p_d_score,
-            p_e_scores,
-            p_e_score_avg,
-            p_neutral_deductions,
-            p_final_score,
-            NULL,
-            p_judge_name,
-            'provisional'
-        )
-        RETURNING id INTO v_score_id;
-
-        RETURN v_score_id;
+    IF v_existing_status::TEXT IN ('official_approved', 'approved') THEN
+        RAISE EXCEPTION 'PUNTUACIÓN BLOQUEADA: La nota ya ha sido aprobada oficialmente por el Juez Árbitro y no puede ser modificada.';
     END IF;
+
+    INSERT INTO public.scores (
+        championship_id,
+        registration_id,
+        apparatus_id,
+        attempt_number,
+        d_score,
+        e_scores,
+        e_score_avg,
+        neutral_deductions,
+        final_score,
+        status,
+        judge_name,
+        notes
+    ) VALUES (
+        p_championship_id,
+        p_registration_id,
+        p_apparatus_id,
+        v_attempt,
+        p_d_score,
+        p_e_scores,
+        p_e_score_avg,
+        p_neutral_deductions,
+        p_final_score,
+        'provisional',
+        p_judge_name,
+        'Enviado en vivo desde terminal por juez: ' || p_judge_name || ' (Intento ' || v_attempt || ')'
+    )
+    ON CONFLICT (registration_id, apparatus_id, attempt_number)
+    DO UPDATE SET
+        d_score = EXCLUDED.d_score,
+        e_scores = EXCLUDED.e_scores,
+        e_score_avg = EXCLUDED.e_score_avg,
+        neutral_deductions = EXCLUDED.neutral_deductions,
+        final_score = EXCLUDED.final_score,
+        status = 'provisional',
+        judge_name = EXCLUDED.judge_name,
+        notes = EXCLUDED.notes,
+        updated_at = timezone('utc'::text, now())
+    RETURNING id INTO v_score_id;
+
+    RETURN v_score_id;
 END;
 $$;
 
@@ -612,7 +681,8 @@ REVOKE EXECUTE ON FUNCTION public.prevent_score_audits_tampering() FROM public, 
 REVOKE EXECUTE ON FUNCTION public.prevent_score_audits_truncate() FROM public, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.track_championship_schedule_update() FROM public, anon, authenticated;
 
-GRANT EXECUTE ON FUNCTION public.submit_fast_judge_score(UUID, TEXT, UUID, UUID, TEXT, NUMERIC, JSONB, NUMERIC, NUMERIC, NUMERIC) TO anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.submit_fast_judge_score(UUID, TEXT, UUID, UUID, TEXT, NUMERIC, JSONB, NUMERIC, NUMERIC, NUMERIC, INT) FROM public;
+GRANT EXECUTE ON FUNCTION public.submit_fast_judge_score(UUID, TEXT, UUID, UUID, TEXT, NUMERIC, JSONB, NUMERIC, NUMERIC, NUMERIC, INT) TO anon, authenticated;
 
 REVOKE TRUNCATE ON public.score_audits FROM public, anon, authenticated;
 
