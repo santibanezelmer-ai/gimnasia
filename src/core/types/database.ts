@@ -830,6 +830,107 @@ export interface Database {
           }
         ]
       }
+      championship_awards_config: {
+        Row: {
+          id: string
+          championship_id: string
+          places_awarded_count: number
+          few_participants_rule: string
+          include_trophies_for_teams: boolean
+          include_club_medals: boolean
+          special_awards: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          championship_id: string
+          places_awarded_count?: number
+          few_participants_rule?: string
+          include_trophies_for_teams?: boolean
+          include_club_medals?: boolean
+          special_awards?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          championship_id?: string
+          places_awarded_count?: number
+          few_participants_rule?: string
+          include_trophies_for_teams?: boolean
+          include_club_medals?: boolean
+          special_awards?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "championship_awards_config_championship_id_fkey"
+            columns: ["championship_id"]
+            isOneToOne: true
+            referencedRelation: "championships"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      championship_awards_ceremonies: {
+        Row: {
+          id: string
+          championship_id: string
+          ceremony_key: string
+          ceremony_type: string
+          category_id: string | null
+          apparatus_code: string | null
+          title: string
+          sequence_order: number
+          status: string
+          podium_data: Json
+          awarded_at: string | null
+          awarded_by_user_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          championship_id: string
+          ceremony_key: string
+          ceremony_type: string
+          category_id?: string | null
+          apparatus_code?: string | null
+          title: string
+          sequence_order?: number
+          status?: string
+          podium_data?: Json
+          awarded_at?: string | null
+          awarded_by_user_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          championship_id?: string
+          ceremony_key?: string
+          ceremony_type?: string
+          category_id?: string | null
+          apparatus_code?: string | null
+          title?: string
+          sequence_order?: number
+          status?: string
+          podium_data?: Json
+          awarded_at?: string | null
+          awarded_by_user_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "championship_awards_ceremonies_championship_id_fkey"
+            columns: ["championship_id"]
+            isOneToOne: false
+            referencedRelation: "championships"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never

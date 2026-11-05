@@ -11,6 +11,7 @@ import { ClubManagerView } from '@/features/views/ClubManagerView'
 import { SubscriptionPlansView } from '@/features/billing/SubscriptionPlansView'
 import { CompetitionScheduleView } from '@/features/schedule/CompetitionScheduleView'
 import { ReportsManager } from '@/features/reports/ReportsManager'
+import { AwardsManager } from '@/features/awards/AwardsManager'
 import { LandingPage } from '@/features/landing/LandingPage'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -32,7 +33,7 @@ const DashboardContent: React.FC = () => {
   const { user, profile, signOut } = useAuth()
   const { activeOrganization, activeRole, organizations } = useOrganization()
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'championships' | 'delegations' | 'judging' | 'schedule' | 'standings' | 'reports' | 'billing'
+    'overview' | 'championships' | 'delegations' | 'judging' | 'schedule' | 'standings' | 'awards' | 'reports' | 'billing'
   >('overview')
 
   type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'outline'
@@ -205,6 +206,19 @@ const DashboardContent: React.FC = () => {
 
               <button
                 type="button"
+                onClick={() => setActiveTab('awards')}
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 font-semibold transition-all ${
+                  activeTab === 'awards'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900'
+                }`}
+              >
+                <Award className="h-4 w-4" />
+                <span>Premiación & Podios</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setActiveTab('reports')}
                 className={`flex items-center gap-2 rounded-lg px-3 py-1.5 font-semibold transition-all ${
                   activeTab === 'reports'
@@ -335,6 +349,7 @@ const DashboardContent: React.FC = () => {
             )}
             {activeTab === 'schedule' && <CompetitionScheduleView />}
             {activeTab === 'standings' && <LiveStandingsBoard />}
+            {activeTab === 'awards' && <AwardsManager />}
             {activeTab === 'reports' && <ReportsManager />}
             {activeTab === 'billing' && <SubscriptionPlansView />}
           </div>
