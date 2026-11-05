@@ -47,6 +47,9 @@ export interface Registration {
   clubId: string
   bibNumber?: number
   rotationGroup?: string
+  subdivision?: string
+  startingApparatus?: string
+  startOrder?: number
   status: RegistrationStatus
   approvedAt?: string
   approvedByUserId?: string

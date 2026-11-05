@@ -88,3 +88,28 @@ export interface Subcategory {
   sortOrder: number
   createdAt: string
 }
+
+export interface CompetitionScheduleItem {
+  id: string
+  championshipId: string
+  timeStart: string
+  timeEnd: string
+  title: string
+  description?: string
+  categoryNames?: string
+  subdivision?: string
+  sortOrder: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface ApparatusLiveStatus {
+  id: string
+  championshipId: string
+  apparatusCode: string
+  apparatusName: string
+  currentRotation: number
+  currentRegistrationId?: string
+  nextRegistrationId?: string
+  updatedAt: string
+}

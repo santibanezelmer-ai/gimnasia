@@ -9,6 +9,7 @@ import { LiveStandingsBoard } from '@/features/standings/LiveStandingsBoard'
 import { HeadJudgeView } from '@/features/views/HeadJudgeView'
 import { ClubManagerView } from '@/features/views/ClubManagerView'
 import { SubscriptionPlansView } from '@/features/billing/SubscriptionPlansView'
+import { CompetitionScheduleView } from '@/features/schedule/CompetitionScheduleView'
 import { LandingPage } from '@/features/landing/LandingPage'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -22,13 +23,14 @@ import {
   LayoutDashboard,
   ShieldCheck,
   Activity,
+  Calendar,
 } from 'lucide-react'
 
 const DashboardContent: React.FC = () => {
   const { user, profile, signOut } = useAuth()
   const { activeOrganization, activeRole, organizations } = useOrganization()
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'championships' | 'delegations' | 'judging' | 'standings' | 'billing'
+    'overview' | 'championships' | 'delegations' | 'judging' | 'schedule' | 'standings' | 'billing'
   >('overview')
 
   type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'outline'
@@ -171,6 +173,19 @@ const DashboardContent: React.FC = () => {
 
               <button
                 type="button"
+                onClick={() => setActiveTab('schedule')}
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 font-semibold transition-all ${
+                  activeTab === 'schedule'
+                    ? 'bg-blue-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900'
+                }`}
+              >
+                <Calendar className="h-4 w-4" />
+                <span>Cronograma & Pista</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setActiveTab('standings')}
                 className={`flex items-center gap-2 rounded-lg px-3 py-1.5 font-semibold transition-all relative ${
                   activeTab === 'standings'
@@ -303,6 +318,7 @@ const DashboardContent: React.FC = () => {
                 <ScoringPad />
               </div>
             )}
+            {activeTab === 'schedule' && <CompetitionScheduleView />}
             {activeTab === 'standings' && <LiveStandingsBoard />}
             {activeTab === 'billing' && <SubscriptionPlansView />}
           </div>

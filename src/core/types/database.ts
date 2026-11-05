@@ -486,6 +486,9 @@ export interface Database {
           club_id: string
           bib_number: number | null
           rotation_group: string | null
+          subdivision: string | null
+          starting_apparatus: string | null
+          start_order: number | null
           status: 'pending_approval' | 'approved' | 'rejected' | 'scratched'
           approved_at: string | null
           approved_by_user_id: string | null
@@ -501,6 +504,9 @@ export interface Database {
           club_id: string
           bib_number?: number | null
           rotation_group?: string | null
+          subdivision?: string | null
+          starting_apparatus?: string | null
+          start_order?: number | null
           status?: 'pending_approval' | 'approved' | 'rejected' | 'scratched'
           approved_at?: string | null
           approved_by_user_id?: string | null
@@ -516,12 +522,22 @@ export interface Database {
           club_id?: string
           bib_number?: number | null
           rotation_group?: string | null
+          subdivision?: string | null
+          starting_apparatus?: string | null
+          start_order?: number | null
           status?: 'pending_approval' | 'approved' | 'rejected' | 'scratched'
           approved_at?: string | null
           approved_by_user_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "registrations_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "registrations_championship_id_fkey"
             columns: ["championship_id"]
@@ -677,6 +693,96 @@ export interface Database {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      competition_schedules: {
+        Row: {
+          id: string
+          championship_id: string
+          time_start: string
+          time_end: string
+          title: string
+          description: string | null
+          category_names: string | null
+          subdivision: string | null
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          championship_id: string
+          time_start: string
+          time_end: string
+          title: string
+          description?: string | null
+          category_names?: string | null
+          subdivision?: string | null
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          championship_id?: string
+          time_start?: string
+          time_end?: string
+          title?: string
+          description?: string | null
+          category_names?: string | null
+          subdivision?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competition_schedules_championship_id_fkey"
+            columns: ["championship_id"]
+            isOneToOne: false
+            referencedRelation: "championships"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      apparatus_live_status: {
+        Row: {
+          id: string
+          championship_id: string
+          apparatus_code: string
+          apparatus_name: string
+          current_rotation: number
+          current_registration_id: string | null
+          next_registration_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          championship_id: string
+          apparatus_code: string
+          apparatus_name: string
+          current_rotation?: number
+          current_registration_id?: string | null
+          next_registration_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          championship_id?: string
+          apparatus_code?: string
+          apparatus_name?: string
+          current_rotation?: number
+          current_registration_id?: string | null
+          next_registration_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apparatus_live_status_championship_id_fkey"
+            columns: ["championship_id"]
+            isOneToOne: false
+            referencedRelation: "championships"
             referencedColumns: ["id"]
           }
         ]

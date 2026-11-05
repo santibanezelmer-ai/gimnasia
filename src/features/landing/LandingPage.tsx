@@ -19,6 +19,7 @@ import {
   Sparkles,
   Scale,
   ArrowUpRight,
+  Megaphone,
 } from 'lucide-react'
 
 export interface LandingPageProps {
@@ -434,6 +435,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ initialMode = 'landing
             <p className="text-xs text-slate-600 leading-relaxed">
               Pantallas gigantes de gimnasio con alto contraste (`bg-slate-950`), podio de premiación
               visual y tablas compactas con números tabulares para no oscilar en vivo.
+            </p>
+          </Card>
+
+          {/* Card: Rotaciones & Llamado a Pista */}
+          <Card className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs hover:border-sky-300 hover:shadow-md transition-all space-y-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-700 border border-sky-100 shadow-2xs">
+              <Megaphone className="h-6 w-6" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900">Rotaciones Olímpicas & Llamado a Pista</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Matriz secuencial FIG de rotación de aparatos, orden de paso con dorsales y pantalla en vivo
+              de megafonía que indica quién compite en cada aparato y quién está en preparación (On Deck).
             </p>
           </Card>
 
