@@ -13,6 +13,9 @@ import { CompetitionScheduleView } from '@/features/schedule/CompetitionSchedule
 import { ReportsManager } from '@/features/reports/ReportsManager'
 import { AwardsManager } from '@/features/awards/AwardsManager'
 import { LandingPage } from '@/features/landing/LandingPage'
+import { PublicChampionshipPortal } from '@/features/public-portal/PublicChampionshipPortal'
+import { ClubDelegatesPortal } from '@/features/delegates/ClubDelegatesPortal'
+import { useRouter } from '@/lib/router'
 import { Badge } from '@/components/ui/badge'
 import {
   Trophy,
@@ -27,13 +30,27 @@ import {
   Activity,
   Calendar,
   BookOpen,
+  Lock,
 } from 'lucide-react'
 
-const DashboardContent: React.FC = () => {
+interface DashboardContentProps {
+  navigate: (to: string) => void
+}
+
+const DashboardContent: React.FC<DashboardContentProps> = ({ navigate }) => {
   const { user, profile, signOut } = useAuth()
   const { activeOrganization, activeRole, organizations } = useOrganization()
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'championships' | 'delegations' | 'judging' | 'schedule' | 'standings' | 'awards' | 'reports' | 'billing'
+    | 'overview'
+    | 'championships'
+    | 'delegations'
+    | 'judging'
+    | 'schedule'
+    | 'standings'
+    | 'awards'
+    | 'reports'
+    | 'billing'
+    | 'club_rotations'
   >('overview')
 
   type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'outline'
@@ -77,10 +94,33 @@ const DashboardContent: React.FC = () => {
             </div>
           </div>
 
-          {/* User Controls & Tenant Switcher */}
+          {/* User Controls, Portals & Tenant Switcher */}
           <div className="flex items-center gap-3">
+            {/* Quick Links: Portal Público y Rotaciones de Club */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/evento/nacional-gaf-2026')}
+                title="Ver Portal Público del Campeonato"
+                className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50/80 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 transition-colors shadow-2xs"
+              >
+                <Trophy className="h-3.5 w-3.5 text-blue-600" />
+                <span className="hidden sm:inline">Portal Público</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/club/rotaciones')}
+                title="Acceso Privado a Rotaciones de Mi Club"
+                className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/80 px-3 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition-colors shadow-2xs"
+              >
+                <Lock className="h-3.5 w-3.5 text-indigo-600" />
+                <span className="hidden sm:inline">Rotaciones Club</span>
+              </button>
+            </div>
+
             {user ? (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 border-l border-slate-200 pl-3">
                 <TenantSwitcher />
                 <div className="text-right hidden sm:block border-l border-slate-200 pl-3">
                   <p className="text-xs font-bold text-slate-900 leading-tight truncate max-w-[150px]">
@@ -102,7 +142,7 @@ const DashboardContent: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
                 <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 border border-slate-200">
                   <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                   Acceso Público & Torneos
@@ -156,6 +196,21 @@ const DashboardContent: React.FC = () => {
                 >
                   <Users className="h-4 w-4" />
                   <span>{activeRole === 'club_manager' ? 'Mi Club & Inscripciones' : 'Clubes & Deportistas'}</span>
+                </button>
+              )}
+
+              {(activeRole === 'club_manager' || activeRole === 'coach' || activeRole === 'org_admin' || profile?.platformRole === 'platform_admin') && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('club_rotations')}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 font-semibold transition-all ${
+                    activeTab === 'club_rotations'
+                      ? 'bg-indigo-700 text-white shadow-xs'
+                      : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900'
+                  }`}
+                >
+                  <Lock className="h-4 w-4" />
+                  <span>Rotaciones de Mi Club</span>
                 </button>
               )}
 
@@ -252,7 +307,10 @@ const DashboardContent: React.FC = () => {
       {/* Main Content Viewport */}
       <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
         {!user ? (
-          <LandingPage />
+          <LandingPage
+            onOpenPublicPortal={(slug) => navigate(`/evento/${slug || 'nacional-gaf-2026'}`)}
+            onOpenClubRotations={() => navigate('/club/rotaciones')}
+          />
         ) : (
           <div className="space-y-6 sm:space-y-8">
             {/* Modern Organization Command Center Banner */}
@@ -341,6 +399,12 @@ const DashboardContent: React.FC = () => {
                 <DelegationsManager />
               )
             )}
+            {activeTab === 'club_rotations' && (
+              <ClubDelegatesPortal
+                onNavigateToPublic={(slug) => navigate(`/evento/${slug}`)}
+                onNavigateHome={() => setActiveTab('overview')}
+              />
+            )}
             {activeTab === 'judging' && (
               <div className="space-y-8">
                 {activeRole === 'head_judge' && <HeadJudgeView />}
@@ -374,14 +438,45 @@ const DashboardContent: React.FC = () => {
 }
 
 export const App: React.FC = () => {
+  const { route, navigate } = useRouter()
+
+  // 1. RUTA PÚBLICA: /evento/:slug (Portal Público del Campeonato)
+  if (route.path === '/evento') {
+    return (
+      <AuthProvider>
+        <OrganizationProvider>
+          <PublicChampionshipPortal
+            slug={route.params.slug || 'nacional-gaf-2026'}
+            onNavigateToDelegates={() => navigate('/club/rotaciones')}
+            onNavigateHome={() => navigate('/')}
+          />
+        </OrganizationProvider>
+      </AuthProvider>
+    )
+  }
+
+  // 2. RUTA PRIVADA: /club/rotaciones (Portal Privado para Clubes y Delegados)
+  if (route.path === '/club/rotaciones') {
+    return (
+      <AuthProvider>
+        <OrganizationProvider>
+          <ClubDelegatesPortal
+            onNavigateToPublic={(slug) => navigate(`/evento/${slug}`)}
+            onNavigateHome={() => navigate('/')}
+          />
+        </OrganizationProvider>
+      </AuthProvider>
+    )
+  }
+
+  // 3. RUTA GENERAL: Dashboard / Landing Page
   return (
     <AuthProvider>
       <OrganizationProvider>
-        <DashboardContent />
+        <DashboardContent navigate={navigate} />
       </OrganizationProvider>
     </AuthProvider>
   )
 }
 
 export default App
-

@@ -24,9 +24,15 @@ import {
 
 export interface LandingPageProps {
   initialMode?: 'landing' | 'login' | 'fast_judge' | 'live_standings'
+  onOpenPublicPortal?: (slug?: string) => void
+  onOpenClubRotations?: () => void
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ initialMode = 'landing' }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({
+  initialMode = 'landing',
+  onOpenPublicPortal,
+  onOpenClubRotations,
+}) => {
   const [activeView, setActiveView] = useState<'landing' | 'login' | 'fast_judge' | 'live_standings'>(initialMode)
   const [previewTab, setPreviewTab] = useState<'live' | 'judge' | 'audit'>('live')
 
@@ -148,6 +154,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({ initialMode = 'landing
               <Flame className="h-4 w-4 text-amber-300 animate-pulse" />
               <span>Resultados en Vivo</span>
             </button>
+
+            {onOpenPublicPortal && (
+              <button
+                type="button"
+                onClick={() => onOpenPublicPortal('nacional-gaf-2026')}
+                className="flex items-center gap-2 rounded-2xl bg-slate-800/80 border border-blue-500/40 px-5 py-3.5 text-sm font-bold text-blue-300 hover:bg-slate-800 hover:text-white transition-all shadow-sm"
+              >
+                <Trophy className="h-4 w-4 text-blue-400" />
+                <span>Portal Público de Evento</span>
+              </button>
+            )}
+
+            {onOpenClubRotations && (
+              <button
+                type="button"
+                onClick={onOpenClubRotations}
+                className="flex items-center gap-2 rounded-2xl bg-indigo-950/70 border border-indigo-600/40 px-5 py-3.5 text-sm font-bold text-indigo-200 hover:bg-indigo-900/80 hover:text-white transition-all shadow-sm"
+              >
+                <ShieldCheck className="h-4 w-4 text-indigo-400" />
+                <span>Rotaciones de Mi Club</span>
+              </button>
+            )}
           </div>
 
           {/* Key metrics / Trust pillars */}
