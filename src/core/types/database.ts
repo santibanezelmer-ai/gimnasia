@@ -787,6 +787,49 @@ export interface Database {
           }
         ]
       }
+      championship_documents: {
+        Row: {
+          id: string
+          championship_id: string
+          document_type: string
+          title: string
+          file_format: string
+          filters: Json
+          metadata: Json
+          generated_by_user_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          championship_id: string
+          document_type: string
+          title: string
+          file_format?: string
+          filters?: Json
+          metadata?: Json
+          generated_by_user_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          championship_id?: string
+          document_type?: string
+          title?: string
+          file_format?: string
+          filters?: Json
+          metadata?: Json
+          generated_by_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "championship_documents_championship_id_fkey"
+            columns: ["championship_id"]
+            isOneToOne: false
+            referencedRelation: "championships"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never

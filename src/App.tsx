@@ -10,6 +10,7 @@ import { HeadJudgeView } from '@/features/views/HeadJudgeView'
 import { ClubManagerView } from '@/features/views/ClubManagerView'
 import { SubscriptionPlansView } from '@/features/billing/SubscriptionPlansView'
 import { CompetitionScheduleView } from '@/features/schedule/CompetitionScheduleView'
+import { ReportsManager } from '@/features/reports/ReportsManager'
 import { LandingPage } from '@/features/landing/LandingPage'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -24,13 +25,14 @@ import {
   ShieldCheck,
   Activity,
   Calendar,
+  BookOpen,
 } from 'lucide-react'
 
 const DashboardContent: React.FC = () => {
   const { user, profile, signOut } = useAuth()
   const { activeOrganization, activeRole, organizations } = useOrganization()
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'championships' | 'delegations' | 'judging' | 'schedule' | 'standings' | 'billing'
+    'overview' | 'championships' | 'delegations' | 'judging' | 'schedule' | 'standings' | 'reports' | 'billing'
   >('overview')
 
   type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'outline'
@@ -201,6 +203,19 @@ const DashboardContent: React.FC = () => {
                 </span>
               </button>
 
+              <button
+                type="button"
+                onClick={() => setActiveTab('reports')}
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 font-semibold transition-all ${
+                  activeTab === 'reports'
+                    ? 'bg-blue-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900'
+                }`}
+              >
+                <BookOpen className="h-4 w-4" />
+                <span>Result Book & Documentos</span>
+              </button>
+
               {(activeRole === 'org_admin' || profile?.platformRole === 'platform_admin') && (
                 <button
                   type="button"
@@ -320,6 +335,7 @@ const DashboardContent: React.FC = () => {
             )}
             {activeTab === 'schedule' && <CompetitionScheduleView />}
             {activeTab === 'standings' && <LiveStandingsBoard />}
+            {activeTab === 'reports' && <ReportsManager />}
             {activeTab === 'billing' && <SubscriptionPlansView />}
           </div>
         )}

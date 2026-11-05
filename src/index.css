@@ -12,3 +12,24 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .page-break-before {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+  .page-break-after {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+}
