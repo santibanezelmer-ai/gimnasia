@@ -931,6 +931,150 @@ export interface Database {
           }
         ]
       }
+      score_deductions: {
+        Row: {
+          id: string
+          score_id: string
+          judge_id: string | null
+          deduction_type: string
+          points: number
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          score_id: string
+          judge_id?: string | null
+          deduction_type: string
+          points: number
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          score_id?: string
+          judge_id?: string | null
+          deduction_type?: string
+          points?: number
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "score_deductions_score_id_fkey"
+            columns: ["score_id"]
+            isOneToOne: false
+            referencedRelation: "scores"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      technical_inquiries: {
+        Row: {
+          id: string
+          championship_id: string
+          score_id: string
+          club_id: string
+          gymnast_id: string
+          submitted_by_user_id: string | null
+          inquiry_reason: string
+          original_d_score: number
+          requested_d_score: number | null
+          resolved_d_score: number | null
+          fee_paid: boolean
+          status: string
+          resolution_notes: string | null
+          resolved_by_user_id: string | null
+          resolved_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          championship_id: string
+          score_id: string
+          club_id: string
+          gymnast_id: string
+          submitted_by_user_id?: string | null
+          inquiry_reason: string
+          original_d_score: number
+          requested_d_score?: number | null
+          resolved_d_score?: number | null
+          fee_paid?: boolean
+          status?: string
+          resolution_notes?: string | null
+          resolved_by_user_id?: string | null
+          resolved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          championship_id?: string
+          score_id?: string
+          club_id?: string
+          gymnast_id?: string
+          submitted_by_user_id?: string | null
+          inquiry_reason?: string
+          original_d_score?: number
+          requested_d_score?: number | null
+          resolved_d_score?: number | null
+          fee_paid?: boolean
+          status?: string
+          resolution_notes?: string | null
+          resolved_by_user_id?: string | null
+          resolved_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_inquiries_championship_id_fkey"
+            columns: ["championship_id"]
+            isOneToOne: false
+            referencedRelation: "championships"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      rotation_groups: {
+        Row: {
+          id: string
+          championship_id: string
+          name: string
+          subdivision: string | null
+          starting_apparatus: string
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          championship_id: string
+          name: string
+          subdivision?: string | null
+          starting_apparatus: string
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          championship_id?: string
+          name?: string
+          subdivision?: string | null
+          starting_apparatus?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rotation_groups_championship_id_fkey"
+            columns: ["championship_id"]
+            isOneToOne: false
+            referencedRelation: "championships"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never

@@ -5,7 +5,7 @@
  * Desarrollado por Comercial Hels SpA para Operix Gymnastics.
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/features/auth/AuthContext'
 import { Badge } from '@/components/ui/badge'
@@ -26,6 +26,7 @@ import {
   AlertCircle,
   RotateCcw,
   Layers,
+  Radio,
 } from 'lucide-react'
 import type { Championship, Category } from '@/core/types/championship'
 import type {
@@ -39,6 +40,10 @@ import {
   computeExAequoClubMedalTally,
   generateCeremonySchedule,
 } from './awardsEngine'
+import {
+  ArenaRealtimeController,
+  type ArenaSyncState,
+} from './arenaRealtimeProtocol'
 import {
   computeAllAroundStandings,
   computeApparatusStandings,
@@ -280,6 +285,54 @@ export const AwardsManager: React.FC = () => {
 
   // Current active ceremony
   const currentCeremony = ceremoniesSchedule[activeCeremonyIndex] || ceremoniesSchedule[0]
+
+  // Realtime Broadcast Controller for Multi-Device Arena Display Sync
+  const realtimeControllerRef = useRef<ArenaRealtimeController | null>(null)
+  const [isBroadcastConnected, setIsBroadcastConnected] = useState<boolean>(false)
+
+  // Initialize Realtime Broadcast Channel
+  useEffect(() => {
+    if (!selectedChampId) return
+
+    const controller = new ArenaRealtimeController({
+      championshipId: selectedChampId,
+      initialCeremonyKey: ceremoniesSchedule[0]?.ceremonyKey || 'initial',
+      initialCeremonyIndex: activeCeremonyIndex,
+      initialStep: revealedStep,
+      isOperator: true,
+      operatorUserId: user?.id,
+      operatorRole: profile?.platformRole || 'operator',
+      onStateChange: (state: ArenaSyncState) => {
+        setActiveCeremonyIndex(state.ceremonyIndex)
+        setRevealedStep(state.revealedStep)
+      },
+    })
+
+    controller.subscribe(supabase)
+    realtimeControllerRef.current = controller
+    setIsBroadcastConnected(true)
+
+    return () => {
+      controller.disconnect()
+      realtimeControllerRef.current = null
+      setIsBroadcastConnected(false)
+    }
+  }, [selectedChampId, user?.id, profile?.platformRole])
+
+  // Synchronized Broadcast Handlers
+  const handleSetRevealedStep = (step: number) => {
+    setRevealedStep(step)
+    realtimeControllerRef.current?.broadcastRevealStep(step)
+  }
+
+  const handleSelectCeremonyIndex = (idx: number, step = 3) => {
+    setActiveCeremonyIndex(idx)
+    setRevealedStep(step)
+    const cer = ceremoniesSchedule[idx]
+    if (cer) {
+      realtimeControllerRef.current?.broadcastChangeCeremony(cer.ceremonyKey, idx, step)
+    }
+  }
 
   // Compute Olympic Club Medal Tally
   const allAroundGlobal = useMemo(() => {
@@ -536,6 +589,14 @@ export const AwardsManager: React.FC = () => {
             >
               <RotateCcw className="h-4 w-4" />
             </button>
+
+            {isBroadcastConnected && (
+              <div className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 border border-emerald-200">
+                <Radio className="h-3 w-3 text-emerald-600 animate-pulse" />
+                <span className="hidden sm:inline">Arena Broadcast</span>
+                <span className="sm:hidden">Sync</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -707,8 +768,7 @@ export const AwardsManager: React.FC = () => {
                             key={c.id}
                             type="button"
                             onClick={() => {
-                              setActiveCeremonyIndex(idx)
-                              setRevealedStep(3)
+                              handleSelectCeremonyIndex(idx, 3)
                             }}
                             className={`w-full rounded-lg px-2.5 py-2 text-left text-xs transition-all flex items-center justify-between ${
                               isCurrent
@@ -767,7 +827,7 @@ export const AwardsManager: React.FC = () => {
                         <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-1 text-xs">
                           <button
                             type="button"
-                            onClick={() => setRevealedStep(1)}
+                            onClick={() => handleSetRevealedStep(1)}
                             className={`rounded px-2 py-1 font-semibold ${
                               revealedStep === 1 ? 'bg-amber-600 text-white' : 'text-slate-600 hover:text-slate-900'
                             }`}
@@ -776,7 +836,7 @@ export const AwardsManager: React.FC = () => {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setRevealedStep(2)}
+                            onClick={() => handleSetRevealedStep(2)}
                             className={`rounded px-2 py-1 font-semibold ${
                               revealedStep === 2 ? 'bg-amber-600 text-white' : 'text-slate-600 hover:text-slate-900'
                             }`}
@@ -785,7 +845,7 @@ export const AwardsManager: React.FC = () => {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setRevealedStep(3)}
+                            onClick={() => handleSetRevealedStep(3)}
                             className={`rounded px-2 py-1 font-semibold ${
                               revealedStep === 3 ? 'bg-amber-600 text-white' : 'text-slate-600 hover:text-slate-900'
                             }`}
@@ -970,8 +1030,7 @@ export const AwardsManager: React.FC = () => {
                           type="button"
                           disabled={activeCeremonyIndex === 0}
                           onClick={() => {
-                            setActiveCeremonyIndex((prev) => Math.max(0, prev - 1))
-                            setRevealedStep(3)
+                            handleSelectCeremonyIndex(Math.max(0, activeCeremonyIndex - 1), 3)
                           }}
                           className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
                         >
@@ -984,8 +1043,7 @@ export const AwardsManager: React.FC = () => {
                           type="button"
                           disabled={activeCeremonyIndex >= ceremoniesSchedule.length - 1}
                           onClick={() => {
-                            setActiveCeremonyIndex((prev) => Math.min(ceremoniesSchedule.length - 1, prev + 1))
-                            setRevealedStep(3)
+                            handleSelectCeremonyIndex(Math.min(ceremoniesSchedule.length - 1, activeCeremonyIndex + 1), 3)
                           }}
                           className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
                         >
@@ -1516,7 +1574,7 @@ export const AwardsManager: React.FC = () => {
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setRevealedStep(1)}
+                onClick={() => handleSetRevealedStep(1)}
                 className={`rounded px-3 py-1.5 text-xs font-bold ${
                   revealedStep === 1 ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300'
                 }`}
@@ -1525,7 +1583,7 @@ export const AwardsManager: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setRevealedStep(2)}
+                onClick={() => handleSetRevealedStep(2)}
                 className={`rounded px-3 py-1.5 text-xs font-bold ${
                   revealedStep === 2 ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300'
                 }`}
@@ -1534,7 +1592,7 @@ export const AwardsManager: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setRevealedStep(3)}
+                onClick={() => handleSetRevealedStep(3)}
                 className={`rounded px-3 py-1.5 text-xs font-bold ${
                   revealedStep === 3 ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300'
                 }`}
